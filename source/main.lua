@@ -1,7 +1,7 @@
 local constant = require 'constant'
 local stateManager = require 'state-manager'
 
-love.graphics.setFont(love.graphics.newFont(64))
+local debugFont = love.graphics.newFont(64)
 
 local mainTransform = love.math.newTransform()
 
@@ -58,7 +58,10 @@ end
 
 function love.draw()
 	love.graphics.push 'all'
+	love.graphics.setFont(debugFont)
 	love.graphics.applyTransform(mainTransform)
 	stateManager:emit 'draw'
 	love.graphics.pop()
+
+	love.graphics.print(string.format('Memory usage: %ikb', collectgarbage 'count'))
 end
