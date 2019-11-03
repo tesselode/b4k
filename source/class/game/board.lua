@@ -34,12 +34,48 @@ function Board:new(pool)
 	self.cursorX, self.cursorY = 0, 0
 end
 
+function Board:getTileAt(x, y)
+	for _, tile in ipairs(self.tiles) do
+		if tile.x == x and tile.y == y then
+			return tile
+		end
+	end
+end
+
+function Board:rotate(x, y, counterClockwise)
+	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
+		'trying to rotate tiles out of bounds')
+	local topLeft = self:getTileAt(x, y)
+	local topRight = self:getTileAt(x + 1, y)
+	local bottomRight = self:getTileAt(x + 1, y + 1)
+	local bottomLeft = self:getTileAt(x, y + 1)
+	if counterClockwise then
+		if topLeft then topLeft.y = topLeft.y + 1 end
+		if bottomLeft then bottomLeft.x = bottomLeft.x + 1 end
+		if bottomRight then bottomRight.y = bottomRight.y - 1 end
+		if topRight then topRight.x = topRight.x - 1 end
+	else
+		if topLeft then topLeft.x = topLeft.x + 1 end
+		if topRight then topRight.y = topRight.y + 1 end
+		if bottomRight then bottomRight.x = bottomRight.x - 1 end
+		if bottomLeft then bottomLeft.y = bottomLeft.y - 1 end
+	end
+end
+
 function Board:mousemoved(x, y, dx, dy, istouch)
 	x, y = self.transform:inverseTransformPoint(x, y)
 	self.showCursor = not (x < 0 or x > self.size or y < 0 or y > self.size)
 	self.cursorX, self.cursorY = math.floor(x), math.floor(y)
 	self.cursorX = util.clamp(self.cursorX, 0, self.size - 2)
 	self.cursorY = util.clamp(self.cursorY, 0, self.size - 2)
+end
+
+function Board:mousepressed(x, y, button, istouch, presses)
+	if button == 1 then
+		self:rotate(self.cursorX, self.cursorY, true)
+	elseif button == 2 then
+		self:rotate(self.cursorX, self.cursorY)
+	end
 end
 
 function Board:drawTiles()

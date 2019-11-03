@@ -26,6 +26,10 @@ function Game:mousemoved(x, y, dx, dy, istouch)
 	self.pool:emit('mousemoved', x, y, dx, dy, istouch)
 end
 
+function Game:mousepressed(x, y, button, istouch, presses)
+	self.pool:emit('mousepressed', x, y, button, istouch, presses)
+end
+
 function Game:draw()
 	self.pool:emit 'draw'
 end
