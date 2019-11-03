@@ -1,9 +1,29 @@
+local Board = require 'class.game.board'
 local Object = require 'lib.classic'
+local nata = require 'lib.nata'
+local Tile = require 'class.game.tile'
+
+local function shouldRemove(e) return e.removeFromPool end
 
 local Game = Object:extend()
 
+function Game:enter()
+	self.pool = nata.new {
+		groups = {
+			tile = {filter = function(e) return e:is(Tile) end},
+		},
+	}
+	self.pool:queue(Board(self.pool))
+end
+
+function Game:update(dt)
+	self.pool:flush()
+	self.pool:emit('update', dt)
+	self.pool:remove(shouldRemove)
+end
+
 function Game:draw()
-	love.graphics.print 'hi!'
+	self.pool:emit 'draw'
 end
 
 return Game
