@@ -23,10 +23,6 @@ function Game:update(dt)
 	self.pool:remove(shouldRemove)
 end
 
-function Game:resize(w, h)
-	self.pool:emit('resize', w, h)
-end
-
 function Game:draw()
 	self.pool:emit 'draw'
 	love.graphics.push 'all'

@@ -8,8 +8,7 @@ Board.size = 8
 Board.sizeOnScreen = .6
 
 function Board:initTransform()
-	self.transform = self.transform or love.math.newTransform()
-	self.transform:reset()
+	self.transform = love.math.newTransform()
 	self.transform:translate(constant.screenWidth / 2, constant.screenHeight / 2)
 	self.transform:rotate(math.pi / 4)
 	self.transform:scale(constant.screenHeight * self.sizeOnScreen / self.size)
@@ -28,10 +27,6 @@ end
 function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
-	self:initTransform()
-end
-
-function Board:resize(w, h)
 	self:initTransform()
 end
 
