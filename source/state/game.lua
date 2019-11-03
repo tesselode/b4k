@@ -1,5 +1,4 @@
 local Board = require 'class.game.board'
-local constant = require 'constant'
 local Object = require 'lib.classic'
 local nata = require 'lib.nata'
 local Tile = require 'class.game.tile'
@@ -23,12 +22,12 @@ function Game:update(dt)
 	self.pool:remove(shouldRemove)
 end
 
+function Game:mousemoved(x, y, dx, dy, istouch)
+	self.pool:emit('mousemoved', x, y, dx, dy, istouch)
+end
+
 function Game:draw()
 	self.pool:emit 'draw'
-	love.graphics.push 'all'
-	love.graphics.setLineWidth(64)
-	love.graphics.rectangle('line', 0, 0, constant.screenWidth, constant.screenHeight)
-	love.graphics.pop()
 end
 
 return Game

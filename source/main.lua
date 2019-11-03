@@ -20,7 +20,14 @@ end
 initMainTransform()
 
 function love.load()
-	stateManager:hook {exclude = {'draw'}}
+	stateManager:hook {
+		exclude = {
+			'mousemoved',
+			'mousepressed',
+			'mousereleased',
+			'draw',
+		},
+	}
 	stateManager:enter(require 'state.game'())
 end
 
@@ -28,6 +35,21 @@ function love.keypressed(key)
 	if key == 'escape' then
 		love.event.quit()
 	end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+	x, y = mainTransform:inverseTransformPoint(x, y)
+	stateManager:emit('mousemoved', x, y, dx, dy, istouch)
+end
+
+function love.mousepressed(x, y, button, istouch, presses)
+	x, y = mainTransform:inverseTransformPoint(x, y)
+	stateManager:emit('mousepressed', x, y, button, istouch, presses)
+end
+
+function love.mousereleased(x, y, button, istouch, presses)
+	x, y = mainTransform:inverseTransformPoint(x, y)
+	stateManager:emit('mousereleased', x, y, button, istouch, presses)
 end
 
 function love.resize(w, h)
