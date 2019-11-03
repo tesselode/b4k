@@ -1,4 +1,4 @@
 return {
-	screenWidth = 3840,
+	screenWidth = 2880,
 	screenHeight = 2160,
 }
