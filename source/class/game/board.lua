@@ -49,17 +49,10 @@ function Board:rotate(x, y, counterClockwise)
 	local topRight = self:getTileAt(x + 1, y)
 	local bottomRight = self:getTileAt(x + 1, y + 1)
 	local bottomLeft = self:getTileAt(x, y + 1)
-	if counterClockwise then
-		if topLeft then topLeft.y = topLeft.y + 1 end
-		if bottomLeft then bottomLeft.x = bottomLeft.x + 1 end
-		if bottomRight then bottomRight.y = bottomRight.y - 1 end
-		if topRight then topRight.x = topRight.x - 1 end
-	else
-		if topLeft then topLeft.x = topLeft.x + 1 end
-		if topRight then topRight.y = topRight.y + 1 end
-		if bottomRight then bottomRight.x = bottomRight.x - 1 end
-		if bottomLeft then bottomLeft.y = bottomLeft.y - 1 end
-	end
+	if topLeft then topLeft:rotate('topLeft', counterClockwise) end
+	if topRight then topRight:rotate('topRight', counterClockwise) end
+	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
+	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
