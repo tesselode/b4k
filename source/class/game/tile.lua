@@ -7,6 +7,7 @@ Tile.colors = {
 	{1, 1/3, 1/3},
 	{1/3, 1, 1/3},
 	{1/3, 1/3, 1},
+	{1, 1, 1/3},
 }
 Tile.rotationAnimationDuration = 1/3
 

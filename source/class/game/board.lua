@@ -42,6 +42,21 @@ function Board:getTileAt(x, y)
 	end
 end
 
+function Board:squareAt(x, y)
+	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
+		'trying to detect squares out of bounds')
+	local topLeft = self:getTileAt(x, y)
+	local topRight = self:getTileAt(x + 1, y)
+	local bottomRight = self:getTileAt(x + 1, y + 1)
+	local bottomLeft = self:getTileAt(x, y + 1)
+	if not (topLeft and topRight and bottomRight and bottomLeft) then
+		return false
+	end
+	return topLeft.color == topRight.color
+		and topRight.color == bottomRight.color
+		and bottomRight.color == bottomLeft.color
+end
+
 function Board:rotate(x, y, counterClockwise)
 	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
 		'trying to rotate tiles out of bounds')
@@ -85,10 +100,25 @@ function Board:drawCursor()
 	love.graphics.pop()
 end
 
+function Board:drawSquareHighlights()
+	love.graphics.push 'all'
+	love.graphics.setColor(.1, .1, .5)
+	love.graphics.setLineWidth(.05)
+	for x = 0, self.size - 2 do
+		for y = 0, self.size - 2 do
+			if self:squareAt(x, y) then
+				love.graphics.rectangle('line', x, y, 2, 2)
+			end
+		end
+	end
+	love.graphics.pop()
+end
+
 function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
+	self:drawSquareHighlights()
 	self:drawCursor()
 	love.graphics.pop()
 end
