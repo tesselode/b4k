@@ -29,8 +29,8 @@ function Tile:new(board, x, y)
 	self.playingClearAnimation = false
 end
 
-function Tile:isFree()
-	if self.rotationAnimation.playing then return false end
+function Tile:isFree(toRotate)
+	if self.rotationAnimation.playing and not toRotate then return false end
 	if self.playingClearAnimation then return false end
 	return true
 end

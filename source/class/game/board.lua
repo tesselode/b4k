@@ -41,10 +41,11 @@ function Board:new(pool)
 	self:detectSquares()
 end
 
-function Board:isFree()
+function Board:isFree(toRotate)
 	for _, tile in ipairs(self.tiles) do
-		if not tile:isFree() then return false end
+		if not tile:isFree(toRotate) then return false end
 	end
+	if toRotate and #self.queue > 0 then return false end
 	return true
 end
 
@@ -159,10 +160,12 @@ function Board:mousemoved(x, y, dx, dy, istouch)
 end
 
 function Board:mousepressed(x, y, button, istouch, presses)
-	if button == 1 then
-		self:rotate(self.cursorX, self.cursorY, true)
-	elseif button == 2 then
-		self:rotate(self.cursorX, self.cursorY)
+	if self:isFree(true) then
+		if button == 1 then
+			self:rotate(self.cursorX, self.cursorY, true)
+		elseif button == 2 then
+			self:rotate(self.cursorX, self.cursorY)
+		end
 	end
 end
 
