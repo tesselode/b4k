@@ -32,15 +32,28 @@ function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
-	self.showCursor = false
-	self.cursorX, self.cursorY = 0, 0
 	self.previousSquares = {}
 	self.squares = {}
+	self.clearedTiles = {}
+	self.queue = {}
+	self.showCursor = false
+	self.cursorX, self.cursorY = 0, 0
 	self:detectSquares()
+end
+
+function Board:isFree()
+	for _, tile in ipairs(self.tiles) do
+		if not tile:isFree() then return false end
+	end
+	return true
 end
 
 function Board:update(dt)
 	self.timers:update(dt)
+	while self:isFree() and #self.queue > 0 do
+		self.queue[1](self)
+		table.remove(self.queue, 1)
+	end
 end
 
 function Board:getTileAt(x, y)
@@ -70,19 +83,21 @@ function Board:detectSquares()
 	util.clear(self.previousSquares)
 	util.copy(self.squares, self.previousSquares)
 	util.clear(self.squares)
+	local totalSquares = 0
 	local newSquares = 0
 	for x = 0, self.size - 2 do
 		for y = 0, self.size - 2 do
 			local index = y * self.size + x
 			if self:squareAt(x, y) then
 				self.squares[index] = true
+				totalSquares = totalSquares + 1
 				if not self.previousSquares[index] then
 					newSquares = newSquares + 1
 				end
 			end
 		end
 	end
-	return newSquares
+	return totalSquares, newSquares
 end
 
 function Board:rotate(x, y, counterClockwise)
@@ -96,7 +111,43 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate('topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
-	print(self:detectSquares())
+	local totalSquares, numNewSquares = self:detectSquares()
+	if totalSquares > 0 and numNewSquares == 0 then
+		table.insert(self.queue, self.clearTiles)
+	end
+end
+
+function Board:clearTiles()
+	local numClearedTiles = 0
+	for i = 0, self.size ^ 2 - 1 do
+		if self.squares[i] then
+			local x, y = util.indexToCoordinates(self.size, i)
+			for tileX = x, x + 1 do
+				for tileY = y, y + 1 do
+					local tile = self:getTileAt(tileX, tileY)
+					if tile and not self.clearedTiles[tile] then
+						tile:clear()
+						numClearedTiles = numClearedTiles + 1
+						self.clearedTiles[tile] = true
+					end
+				end
+			end
+		end
+	end
+	util.clear(self.clearedTiles)
+	util.clear(self.squares)
+	if numClearedTiles > 0 then
+		table.insert(self.queue, self.removeTiles)
+	end
+end
+
+function Board:removeTiles()
+	for i = #self.tiles, 1, -1 do
+		local tile = self.tiles[i]
+		if tile.cleared then
+			table.remove(self.tiles, i)
+		end
+	end
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)

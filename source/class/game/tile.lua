@@ -16,6 +16,7 @@ function Tile:new(board, x, y)
 	self.x = x
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
+	self.cleared = false
 	self.rotationAnimation = {
 		playing = false,
 		centerX = nil,
@@ -24,6 +25,11 @@ function Tile:new(board, x, y)
 		tween = nil,
 		flip = nil,
 	}
+end
+
+function Tile:isFree()
+	if self.rotationAnimation.playing then return false end
+	return true
 end
 
 function Tile:rotate(corner, counterClockwise)
@@ -86,7 +92,11 @@ function Tile:rotate(corner, counterClockwise)
 	self.y = self.y + deltaY
 end
 
-function Tile:_getDisplayPosition()
+function Tile:clear()
+	self.cleared = true
+end
+
+function Tile:getDisplayPosition()
 	if self.rotationAnimation.playing then
 		local x = self.rotationAnimation.centerX + math.sqrt(2)/2 * math.cos(self.rotationAnimation.angle)
 		local y = self.rotationAnimation.centerY + math.sqrt(2)/2 * math.sin(self.rotationAnimation.angle)
@@ -98,7 +108,7 @@ end
 function Tile:_draw()
 	love.graphics.push 'all'
 	love.graphics.setColor(self.colors[self.color])
-	local x, y = self:_getDisplayPosition()
+	local x, y = self:getDisplayPosition()
 	love.graphics.rectangle('fill', x, y, 1, 1)
 	love.graphics.pop()
 end
