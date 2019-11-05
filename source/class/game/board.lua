@@ -18,11 +18,16 @@ function Board:initTransform()
 	self.transform:translate(-self.size / 2, -self.size / 2)
 end
 
+function Board:spawnTile(x, y, options)
+	table.insert(self.tiles, self.pool:queue(Tile(self, x, y, options)))
+end
+
 function Board:initTiles()
+	local tileOptions = {skipSpawnAnimation = true}
 	self.tiles = {}
 	for x = 0, self.size - 1 do
 		for y = 0, self.size - 1 do
-			table.insert(self.tiles, self.pool:queue(Tile(self, x, y)))
+			self:spawnTile(x, y, tileOptions)
 		end
 	end
 end
@@ -35,6 +40,7 @@ function Board:new(pool)
 	self.previousSquares = {}
 	self.squares = {}
 	self.clearedTiles = {}
+	self.removedTiles = {}
 	self.queue = {}
 	self.showCursor = false
 	self.cursorX, self.cursorY = 0, 0
@@ -143,12 +149,34 @@ function Board:clearTiles()
 end
 
 function Board:removeTiles()
+	util.clear(self.removedTiles)
+	--[[
+		minX and minY are the minimum tile x and y values
+		out of all the tiles removed in this sweep. These
+		values are used to make the tile spawning animation
+		a little tighter - see the Tile class for the juicy
+		details.
+	]]
+	local minX, minY
 	for i = #self.tiles, 1, -1 do
 		local tile = self.tiles[i]
 		if tile.cleared then
 			table.remove(self.tiles, i)
+			local index = util.coordinatesToIndex(self.size, tile.x, tile.y)
+			table.insert(self.removedTiles, index)
+			minX = minX and math.min(minX, tile.x) or tile.x
+			minY = minY and math.min(minY, tile.y) or tile.y
 		end
 	end
+	local tileOptions = {
+		spawnAnimationMinX = minX,
+		spawnAnimationMinY = minY,
+	}
+	for _, index in ipairs(self.removedTiles) do
+		local x, y = util.indexToCoordinates(self.size, index)
+		self:spawnTile(x, y, tileOptions)
+	end
+	self:detectSquares()
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)

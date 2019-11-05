@@ -8,16 +8,47 @@ Tile.colors = {
 	{1/3, 1/3, 1},
 	{1, 1, 1/3},
 }
+Tile.spawnAnimationDuration = 1/2
+Tile.spawnAnimationStaggerAmount = .05
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = 1/2
 
-function Tile:new(board, x, y)
+--[[
+	The spawn animation is delayed based on the x and y position
+	of the tile. This way, new tiles spawn in with a diagonal
+	sweeping motion across the board. However, if there are
+	only new tiles spawning towards the bottom-right corner
+	of the board, for example, there will be a noticeable delay
+	before any tiles spawn in at all, which looks awkward. The
+	minX and minY values are used to offset this delay - these
+	are the minimum x and minimum y values out of all the tiles
+	that are spawning at the same time. The animation is
+	delayed with respect to these values, not the top-left
+	corner of the board.
+]]
+function Tile:playSpawnAnimation(minX, minY)
+	self.scale = 0
+	local relativeX = self.x - minX
+	local relativeY = self.y - minY
+	self.board.timers:after((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
+		:tween(self.spawnAnimationDuration, self, {scale = 1})
+			:ease('back', 'out')
+end
+
+function Tile:new(board, x, y, options)
+	options = options or {}
+	options.spawnAnimationMinX = options.spawnAnimationMinX or 0
+	options.spawnAnimationMinY = options.spawnAnimationMinY or 0
 	self.board = board
 	self.x = x
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
 	self.cleared = false
-	self.scale = 1
+	if options.skipSpawnAnimation then
+		self.scale = 1
+	else
+		self:playSpawnAnimation(options.spawnAnimationMinX, options.spawnAnimationMinY)
+	end
 	self.rotationAnimation = {
 		playing = false,
 		centerX = nil,
