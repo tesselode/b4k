@@ -34,6 +34,9 @@ function Board:new(pool)
 	self:initTransform()
 	self.showCursor = false
 	self.cursorX, self.cursorY = 0, 0
+	self.previousSquares = {}
+	self.squares = {}
+	self:detectSquares()
 end
 
 function Board:update(dt)
@@ -63,6 +66,25 @@ function Board:squareAt(x, y)
 		and bottomRight.color == bottomLeft.color
 end
 
+function Board:detectSquares()
+	util.clear(self.previousSquares)
+	util.copy(self.squares, self.previousSquares)
+	util.clear(self.squares)
+	local newSquares = 0
+	for x = 0, self.size - 2 do
+		for y = 0, self.size - 2 do
+			local index = y * self.size + x
+			if self:squareAt(x, y) then
+				self.squares[index] = true
+				if not self.previousSquares[index] then
+					newSquares = newSquares + 1
+				end
+			end
+		end
+	end
+	return newSquares
+end
+
 function Board:rotate(x, y, counterClockwise)
 	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
 		'trying to rotate tiles out of bounds')
@@ -74,6 +96,7 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate('topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
+	print(self:detectSquares())
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
@@ -110,11 +133,10 @@ function Board:drawSquareHighlights()
 	love.graphics.push 'all'
 	love.graphics.setColor(.1, .1, .5)
 	love.graphics.setLineWidth(.05)
-	for x = 0, self.size - 2 do
-		for y = 0, self.size - 2 do
-			if self:squareAt(x, y) then
-				love.graphics.rectangle('line', x, y, 2, 2)
-			end
+	for i = 0, self.size ^ 2 - 1 do
+		if self.squares[i] then
+			local x, y = util.indexToCoordinates(self.size, i)
+			love.graphics.rectangle('line', x, y, 2, 2)
 		end
 	end
 	love.graphics.pop()
