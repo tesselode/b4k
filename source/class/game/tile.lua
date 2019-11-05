@@ -1,4 +1,3 @@
-local keeper = require 'lib.keeper'
 local Object = require 'lib.classic'
 
 local Tile = Object:extend()
@@ -10,6 +9,7 @@ Tile.colors = {
 	{1, 1, 1/3},
 }
 Tile.rotationAnimationDuration = 1/3
+Tile.clearAnimationDuration = 1/2
 
 function Tile:new(board, x, y)
 	self.board = board
@@ -17,6 +17,7 @@ function Tile:new(board, x, y)
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
 	self.cleared = false
+	self.scale = 1
 	self.rotationAnimation = {
 		playing = false,
 		centerX = nil,
@@ -25,10 +26,12 @@ function Tile:new(board, x, y)
 		tween = nil,
 		flip = nil,
 	}
+	self.playingClearAnimation = false
 end
 
 function Tile:isFree()
 	if self.rotationAnimation.playing then return false end
+	if self.playingClearAnimation then return false end
 	return true
 end
 
@@ -92,8 +95,16 @@ function Tile:rotate(corner, counterClockwise)
 	self.y = self.y + deltaY
 end
 
+function Tile:finishClearAnimation()
+	self.playingClearAnimation = false
+end
+
 function Tile:clear()
 	self.cleared = true
+	self.playingClearAnimation = true
+	self.board.timers:tween(self.clearAnimationDuration, self, {scale = 0})
+		:ease('back', 'in')
+		:after(0, self.finishClearAnimation, self)
 end
 
 function Tile:getDisplayPosition()
@@ -109,7 +120,11 @@ function Tile:_draw()
 	love.graphics.push 'all'
 	love.graphics.setColor(self.colors[self.color])
 	local x, y = self:getDisplayPosition()
-	love.graphics.rectangle('fill', x, y, 1, 1)
+	love.graphics.rectangle(
+		'fill',
+		x + .5 - .5 * self.scale, y + .5 - .5 * self.scale,
+		self.scale, self.scale
+	)
 	love.graphics.pop()
 end
 
