@@ -1,4 +1,5 @@
 local constant = require 'constant'
+local keeper = require 'lib.keeper'
 local Object = require 'lib.classic'
 local Tile = require 'class.game.tile'
 local util = require 'util'
@@ -21,17 +22,22 @@ function Board:initTiles()
 	self.tiles = {}
 	for x = 0, self.size - 1 do
 		for y = 0, self.size - 1 do
-			table.insert(self.tiles, self.pool:queue(Tile(x, y)))
+			table.insert(self.tiles, self.pool:queue(Tile(self, x, y)))
 		end
 	end
 end
 
 function Board:new(pool)
+	self.timers = keeper.new()
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
 	self.showCursor = false
 	self.cursorX, self.cursorY = 0, 0
+end
+
+function Board:update(dt)
+	self.timers:update(dt)
 end
 
 function Board:getTileAt(x, y)

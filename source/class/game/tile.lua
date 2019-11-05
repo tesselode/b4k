@@ -11,8 +11,8 @@ Tile.colors = {
 }
 Tile.rotationAnimationDuration = 1/3
 
-function Tile:new(x, y)
-	self.timers = keeper.new()
+function Tile:new(board, x, y)
+	self.board = board
 	self.x = x
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
@@ -24,10 +24,6 @@ function Tile:new(x, y)
 		tween = nil,
 		flip = nil,
 	}
-end
-
-function Tile:update(dt)
-	self.timers:update(dt)
 end
 
 function Tile:rotate(corner, counterClockwise)
@@ -76,12 +72,12 @@ function Tile:rotate(corner, counterClockwise)
 	self.rotationAnimation.centerY = centerY
 	self.rotationAnimation.angle = angle
 	local angleIncrement = counterClockwise and -math.pi/2 or math.pi/2
-	self.rotationAnimation.tween = self.timers:tween(
+	self.rotationAnimation.tween = self.board.timers:tween(
 		self.rotationAnimationDuration,
 		self.rotationAnimation,
 		{angle = angle + angleIncrement})
 		:ease('back', 'out', 1.5)
-	self.rotationAnimation.flip = self.timers:flip(
+	self.rotationAnimation.flip = self.board.timers:flip(
 		self.rotationAnimationDuration,
 		self.rotationAnimation,
 		'playing')
