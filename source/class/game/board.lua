@@ -47,7 +47,7 @@ function Board:new(pool)
 	self.clearedTiles = {}
 	self.removedTiles = {}
 	self.queue = {}
-	self.showCursor = false
+	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
 	self:detectSquares()
 
@@ -197,14 +197,14 @@ end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
 	x, y = self.transform:inverseTransformPoint(x, y)
-	self.showCursor = not (x < 0 or x > self.size or y < 0 or y > self.size)
+	self.mouseInBounds = not (x < 0 or x > self.size or y < 0 or y > self.size)
 	self.cursorX, self.cursorY = math.floor(x), math.floor(y)
 	self.cursorX = util.clamp(self.cursorX, 0, self.size - 2)
 	self.cursorY = util.clamp(self.cursorY, 0, self.size - 2)
 end
 
 function Board:mousepressed(x, y, button, istouch, presses)
-	if self:isFree(true) then
+	if self.mouseInBounds and self:isFree(true) then
 		if button == 1 then
 			self:rotate(self.cursorX, self.cursorY, true)
 		elseif button == 2 then
@@ -220,7 +220,7 @@ function Board:drawTiles()
 end
 
 function Board:drawCursor()
-	if not self.showCursor then return end
+	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
 	love.graphics.setLineWidth(self.cursorLineWidth)
 	love.graphics.rectangle('line', self.cursorX, self.cursorY, 2, 2)
