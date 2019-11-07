@@ -1,4 +1,6 @@
+local charm = require 'lib.charm'
 local constant = require 'constant'
+local font = require 'font'
 local keeper = require 'lib.keeper'
 local Object = require 'lib.classic'
 local Tile = require 'class.game.tile'
@@ -11,10 +13,11 @@ Board.sizeOnScreen = .6
 Board.cursorLineWidth = .1
 
 function Board:initTransform()
+	self.scale = constant.screenHeight * self.sizeOnScreen / self.size
 	self.transform = love.math.newTransform()
 	self.transform:translate(constant.screenWidth / 2, constant.screenHeight / 2)
 	self.transform:rotate(math.pi / 4)
-	self.transform:scale(constant.screenHeight * self.sizeOnScreen / self.size)
+	self.transform:scale(self.scale)
 	self.transform:translate(-self.size / 2, -self.size / 2)
 end
 
@@ -34,17 +37,22 @@ end
 
 function Board:new(pool)
 	self.timers = keeper.new()
+	self.ui = charm.new()
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
 	self.previousSquares = {}
 	self.squares = {}
+	self.totalSquares = 0
 	self.clearedTiles = {}
 	self.removedTiles = {}
 	self.queue = {}
 	self.showCursor = false
 	self.cursorX, self.cursorY = 0, 0
 	self:detectSquares()
+
+	-- cosmetic
+	self.hudSquaresTextScale = 1
 end
 
 function Board:isFree(toRotate)
@@ -90,21 +98,29 @@ function Board:detectSquares()
 	util.clear(self.previousSquares)
 	util.copy(self.squares, self.previousSquares)
 	util.clear(self.squares)
-	local totalSquares = 0
+	local previousTotalSquares = self.totalSquares
+	self.totalSquares = 0
 	local newSquares = 0
 	for x = 0, self.size - 2 do
 		for y = 0, self.size - 2 do
 			local index = y * self.size + x
 			if self:squareAt(x, y) then
 				self.squares[index] = true
-				totalSquares = totalSquares + 1
+				self.totalSquares = self.totalSquares + 1
 				if not self.previousSquares[index] then
 					newSquares = newSquares + 1
 				end
 			end
 		end
 	end
-	return totalSquares, newSquares
+	if self.totalSquares > previousTotalSquares then
+		if self.hudSquaresTextScaleTween then
+			self.hudSquaresTextScaleTween:cancel()
+		end
+		self.hudSquaresTextScale = 1.1
+		self.hudSquaresTextScaleTween = self.timers:tween(.15, self, {hudSquaresTextScale = 1})
+	end
+	return newSquares
 end
 
 function Board:rotate(x, y, counterClockwise)
@@ -118,8 +134,8 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate('topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
-	local totalSquares, numNewSquares = self:detectSquares()
-	if totalSquares > 0 and numNewSquares == 0 then
+	local numNewSquares = self:detectSquares()
+	if self.totalSquares > 0 and numNewSquares == 0 then
 		table.insert(self.queue, self.clearTiles)
 	end
 end
@@ -224,12 +240,26 @@ function Board:drawSquareHighlights()
 	love.graphics.pop()
 end
 
+function Board:drawHud()
+	self.ui:start()
+	if self.totalSquares > 0 then
+		local text = self.totalSquares == 1 and '1 square' or self.totalSquares .. ' squares'
+		local scale = 1 / self.scale * self.hudSquaresTextScale
+		self.ui:new('text', font.hud, text)
+			:scale(scale)
+			:center(self.size/2)
+			:top(self.size + 1/4)
+	end
+	self.ui:draw()
+end
+
 function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
 	self:drawSquareHighlights()
 	self:drawCursor()
+	self:drawHud()
 	love.graphics.pop()
 end
 
