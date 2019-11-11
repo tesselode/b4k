@@ -31,16 +31,16 @@ function Tile:playSpawnAnimation(minX, minY)
 	self.scale = 0
 	local relativeX = self.x - minX
 	local relativeY = self.y - minY
-	self.board.timers:after((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
+	self.pool.data.timers:after((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
 		:tween(self.spawnAnimationDuration, self, {scale = 1})
 			:ease('back', 'out')
 end
 
-function Tile:new(board, x, y, options)
+function Tile:new(pool, x, y, options)
 	options = options or {}
 	options.spawnAnimationMinX = options.spawnAnimationMinX or 0
 	options.spawnAnimationMinY = options.spawnAnimationMinY or 0
-	self.board = board
+	self.pool = pool
 	self.x = x
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
@@ -113,12 +113,12 @@ function Tile:rotate(corner, counterClockwise)
 	self.rotationAnimation.centerY = centerY
 	self.rotationAnimation.angle = angle
 	local angleIncrement = counterClockwise and -math.pi/2 or math.pi/2
-	self.rotationAnimation.tween = self.board.timers:tween(
+	self.rotationAnimation.tween = self.pool.data.timers:tween(
 		self.rotationAnimationDuration,
 		self.rotationAnimation,
 		{angle = angle + angleIncrement})
 		:ease('back', 'out', 1.5)
-	self.rotationAnimation.flip = self.board.timers:flip(
+	self.rotationAnimation.flip = self.pool.data.timers:flip(
 		self.rotationAnimationDuration,
 		self.rotationAnimation,
 		'playing')
@@ -134,7 +134,7 @@ end
 function Tile:clear()
 	self.cleared = true
 	self.playingClearAnimation = true
-	self.board.timers:tween(self.clearAnimationDuration, self, {scale = 0})
+	self.pool.data.timers:tween(self.clearAnimationDuration, self, {scale = 0})
 		:ease('back', 'in')
 		:after(0, self.finishClearAnimation, self)
 end

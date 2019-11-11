@@ -12,6 +12,10 @@ function Game:enter()
 		groups = {
 			tile = {filter = function(e) return e:is(Tile) end},
 		},
+		systems = {
+			require 'system.timer',
+			nata.oop(),
+		},
 	}
 	self.pool:queue(Board(self.pool))
 end

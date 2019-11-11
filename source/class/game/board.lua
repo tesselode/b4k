@@ -2,7 +2,6 @@ local charm = require 'lib.charm'
 local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
-local keeper = require 'lib.keeper'
 local Object = require 'lib.classic'
 local ScorePopup = require 'class.game.score-popup'
 local Tile = require 'class.game.tile'
@@ -26,7 +25,7 @@ function Board:initTransform()
 end
 
 function Board:spawnTile(x, y, options)
-	table.insert(self.tiles, self.pool:queue(Tile(self, x, y, options)))
+	table.insert(self.tiles, self.pool:queue(Tile(self.pool, x, y, options)))
 end
 
 function Board:initTiles()
@@ -40,7 +39,6 @@ function Board:initTiles()
 end
 
 function Board:new(pool)
-	self.timers = keeper.new()
 	self.ui = charm.new()
 	self.sidewaysUi = charm.new()
 	self.pool = pool
@@ -71,7 +69,6 @@ function Board:isFree(toRotate)
 end
 
 function Board:update(dt)
-	self.timers:update(dt)
 	while self:isFree() and #self.queue > 0 do
 		self.queue[1](self)
 		table.remove(self.queue, 1)
@@ -129,7 +126,7 @@ function Board:detectSquares()
 			self.hudSquaresTextScaleTween:cancel()
 		end
 		self.hudSquaresTextScale = 1.1
-		self.hudSquaresTextScaleTween = self.timers:tween(.15, self, {hudSquaresTextScale = 1})
+		self.hudSquaresTextScaleTween = self.pool.data.timers:tween(.15, self, {hudSquaresTextScale = 1})
 	end
 	return newSquares
 end
