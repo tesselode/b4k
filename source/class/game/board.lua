@@ -152,17 +152,7 @@ function Board:rotate(x, y, counterClockwise)
 end
 
 function Board:clearTiles()
-	local scoreIncrement = 0
-	for i = 1, self.totalSquares do
-		scoreIncrement = scoreIncrement + i
-	end
-	self.score = self.score + scoreIncrement
-	self.pool:queue(ScorePopup(
-		constant.screenWidth/2,
-		constant.screenHeight/2,
-		self.totalSquares,
-		scoreIncrement
-	))
+	local sumTilesX, sumTilesY = 0, 0
 	local numClearedTiles = 0
 	for i = 0, self.size ^ 2 - 1 do
 		if self.squares[i] then
@@ -172,6 +162,8 @@ function Board:clearTiles()
 					local tile = self:getTileAt(tileX, tileY)
 					if tile and not self.clearedTiles[tile] then
 						tile:clear()
+						sumTilesX = sumTilesX + tile.x
+						sumTilesY = sumTilesY + tile.y
 						numClearedTiles = numClearedTiles + 1
 						self.clearedTiles[tile] = true
 					end
@@ -179,8 +171,31 @@ function Board:clearTiles()
 			end
 		end
 	end
+
+	-- award points
+	local scoreIncrement = 0
+	for i = 1, self.totalSquares do
+		scoreIncrement = scoreIncrement + i
+	end
+	self.score = self.score + scoreIncrement
+
+	-- spawn the score popup
+	local scorePopupX, scorePopupY = self.transform:transformPoint(
+		sumTilesX / numClearedTiles + .5,
+		sumTilesY / numClearedTiles + .5
+	)
+	self.pool:queue(ScorePopup(
+		scorePopupX,
+		scorePopupY,
+		self.totalSquares,
+		scoreIncrement
+	))
+
+	-- reset some data
 	util.clear(self.clearedTiles)
 	util.clear(self.squares)
+
+	-- queue up a tile removal pass if needed
 	if numClearedTiles > 0 then
 		table.insert(self.queue, self.removeTiles)
 	end
