@@ -182,6 +182,7 @@ function Board:clearTiles()
 		sumTilesY / numClearedTiles + .5
 	)
 	self.pool:queue(ScorePopup(
+		self.pool,
 		scorePopupX,
 		scorePopupY,
 		self.totalSquares,

@@ -14,6 +14,7 @@ function Game:enter()
 		},
 		systems = {
 			require 'system.timer',
+			require 'system.ui',
 			nata.oop(),
 		},
 	}
@@ -35,7 +36,9 @@ function Game:mousepressed(x, y, button, istouch, presses)
 end
 
 function Game:draw()
+	self.pool:emit 'beforeDraw'
 	self.pool:emit 'draw'
+	self.pool:emit 'afterDraw'
 end
 
 return Game
