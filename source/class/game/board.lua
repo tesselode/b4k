@@ -11,6 +11,8 @@ local Board = Object:extend()
 Board.size = 8
 Board.sizeOnScreen = .6
 Board.cursorLineWidth = .1
+Board.rollingScoreSpeed = 10
+Board.rollingScoreRoundUpThreshold = .4
 
 function Board:initTransform()
 	self.scale = constant.screenHeight * self.sizeOnScreen / self.size
@@ -38,6 +40,7 @@ end
 function Board:new(pool)
 	self.timers = keeper.new()
 	self.ui = charm.new()
+	self.sidewaysUi = charm.new()
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
@@ -49,10 +52,12 @@ function Board:new(pool)
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
+	self.score = 0
 	self:detectSquares()
 
 	-- cosmetic
 	self.hudSquaresTextScale = 1
+	self.rollingScore = 0
 end
 
 function Board:isFree(toRotate)
@@ -68,6 +73,10 @@ function Board:update(dt)
 	while self:isFree() and #self.queue > 0 do
 		self.queue[1](self)
 		table.remove(self.queue, 1)
+	end
+	self.rollingScore = util.lerp(self.rollingScore, self.score, self.rollingScoreSpeed * dt)
+	if self.rollingScore > self.score - self.rollingScoreRoundUpThreshold then
+		self.rollingScore = self.score
 	end
 end
 
@@ -141,6 +150,9 @@ function Board:rotate(x, y, counterClockwise)
 end
 
 function Board:clearTiles()
+	for i = 1, self.totalSquares do
+		self.score = self.score + i
+	end
 	local numClearedTiles = 0
 	for i = 0, self.size ^ 2 - 1 do
 		if self.squares[i] then
@@ -246,11 +258,21 @@ function Board:drawHud()
 		local text = self.totalSquares == 1 and '1 square' or self.totalSquares .. ' squares'
 		local scale = 1 / self.scale * self.hudSquaresTextScale
 		self.ui:new('text', font.hud, text)
-			:scale(scale)
 			:center(self.size/2)
 			:top(self.size + 1/4)
+			:scale(scale)
 	end
 	self.ui:draw()
+	love.graphics.push 'all'
+	love.graphics.rotate(-math.pi/2)
+	self.sidewaysUi
+		:start()
+		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
+		:center(-self.size/2)
+		:bottom(-1/4)
+		:scale(1 / self.scale)
+		:draw()
+	love.graphics.pop()
 end
 
 function Board:draw()
