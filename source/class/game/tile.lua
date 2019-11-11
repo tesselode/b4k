@@ -1,12 +1,13 @@
+local color = require 'color'
 local Object = require 'lib.classic'
 
 local Tile = Object:extend()
 
 Tile.colors = {
-	{1, 1/3, 1/3},
-	{1/3, 1, 1/3},
-	{1/3, 1/3, 1},
-	{1, 1, 1/3},
+	color.green,
+	color.blue,
+	color.yellow,
+	color.red,
 }
 Tile.spawnAnimationDuration = 1/2
 Tile.spawnAnimationStaggerAmount = .05

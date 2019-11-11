@@ -1,4 +1,5 @@
 local charm = require 'lib.charm'
+local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
 local keeper = require 'lib.keeper'
@@ -241,7 +242,7 @@ end
 
 function Board:drawSquareHighlights()
 	love.graphics.push 'all'
-	love.graphics.setColor(.1, .1, .5)
+	love.graphics.setColor(color.white)
 	love.graphics.setLineWidth(.05)
 	for i = 0, self.size ^ 2 - 1 do
 		if self.squares[i] then
