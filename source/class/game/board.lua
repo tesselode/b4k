@@ -4,6 +4,7 @@ local constant = require 'constant'
 local font = require 'font'
 local keeper = require 'lib.keeper'
 local Object = require 'lib.classic'
+local ScorePopup = require 'class.game.score-popup'
 local Tile = require 'class.game.tile'
 local util = require 'util'
 
@@ -151,9 +152,17 @@ function Board:rotate(x, y, counterClockwise)
 end
 
 function Board:clearTiles()
+	local scoreIncrement = 0
 	for i = 1, self.totalSquares do
-		self.score = self.score + i
+		scoreIncrement = scoreIncrement + i
 	end
+	self.score = self.score + scoreIncrement
+	self.pool:queue(ScorePopup(
+		constant.screenWidth/2,
+		constant.screenHeight/2,
+		self.totalSquares,
+		scoreIncrement
+	))
 	local numClearedTiles = 0
 	for i = 0, self.size ^ 2 - 1 do
 		if self.squares[i] then
