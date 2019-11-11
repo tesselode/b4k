@@ -187,6 +187,7 @@ end
 
 function Element.base:x(x, anchor)
 	anchor = anchor or 0
+	self._anchorX = anchor
 	self._x = x - self._width * anchor
 end
 
@@ -196,6 +197,7 @@ function Element.base:right(x) return self:x(x, 1) end
 
 function Element.base:y(y, anchor)
 	anchor = anchor or 0
+	self._anchorY = anchor
 	self._y = y - self._height * anchor
 end
 
@@ -212,17 +214,23 @@ function Element.base:shift(dx, dy)
 	self._y = self._y + (dy or 0)
 end
 
-function Element.base:width(width)
+function Element.base:width(width, anchorX)
+	anchorX = anchorX or self._anchorX or 0
+	local previousX = self.get.x(self, anchorX)
 	self._width = width
+	self:x(previousX, anchorX)
 end
 
-function Element.base:height(height)
+function Element.base:height(height, anchorY)
+	anchorY = anchorY or self._anchorY or 0
+	local previousY = self.get.y(self, anchorY)
 	self._height = height
+	self:y(previousY, anchorY)
 end
 
-function Element.base:size(width, height)
-	self:width(width)
-	self:height(height)
+function Element.base:size(width, height, anchorX, anchorY)
+	self:width(width, anchorX)
+	self:height(height, anchorY)
 end
 
 function Element.base:name(name)
@@ -515,17 +523,17 @@ function Element.image:new(image, x, y)
 	self._height = image:getHeight()
 end
 
-function Element.image:scaleX(scaleX)
-	self._width = self._image:getWidth() * scaleX
+function Element.image:scaleX(scaleX, anchorX)
+	self:width(self._image:getWidth() * scaleX, anchorX)
 end
 
-function Element.image:scaleY(scaleY)
-	self._height = self._image:getHeight() * scaleY
+function Element.image:scaleY(scaleY, anchorY)
+	self:height(self._image:getHeight() * scaleY, anchorY)
 end
 
-function Element.image:scale(scaleX, scaleY)
-	self:scaleX(scaleX or 1)
-	self:scaleY(scaleY or scaleX)
+function Element.image:scale(scaleX, scaleY, anchorX, anchorY)
+	self:scaleX(scaleX or 1, anchorX)
+	self:scaleY(scaleY or scaleX, anchorY)
 end
 
 function Element.image:color(r, g, b, a)
@@ -561,17 +569,17 @@ function Element.text:new(font, text, x, y)
 	self._height = getTextHeight(font, text)
 end
 
-function Element.text:scaleX(scaleX)
-	self._width = self._font:getWidth(self._text) * scaleX
+function Element.text:scaleX(scaleX, anchorX)
+	self:width(self._font:getWidth(self._text) * scaleX, anchorX)
 end
 
-function Element.text:scaleY(scaleY)
-	self._height = getTextHeight(self._font, self._text) * scaleY
+function Element.text:scaleY(scaleY, anchorY)
+	self:height(getTextHeight(self._font, self._text) * scaleY, anchorY)
 end
 
-function Element.text:scale(scaleX, scaleY)
-	self:scaleX(scaleX or 1)
-	self:scaleY(scaleY or scaleX)
+function Element.text:scale(scaleX, scaleY, anchorX, anchorY)
+	self:scaleX(scaleX or 1, anchorX)
+	self:scaleY(scaleY or scaleX, anchorY)
 end
 
 function Element.text:color(r, g, b, a)
@@ -643,17 +651,17 @@ function Element.paragraph:new(font, text, limit, align, x, y)
 	self._height = getParagraphHeight(font, text, limit)
 end
 
-function Element.paragraph:scaleX(scaleX)
-	self._width = self._limit * scaleX
+function Element.paragraph:scaleX(scaleX, anchorX)
+	self:width(self._limit * scaleX, anchorX)
 end
 
-function Element.paragraph:scaleY(scaleY)
-	self._height = getParagraphHeight(self._font, self._text, self._limit) * scaleY
+function Element.paragraph:scaleY(scaleY, anchorY)
+	self:height(getParagraphHeight(self._font, self._text, self._limit) * scaleY, anchorY)
 end
 
-function Element.paragraph:scale(scaleX, scaleY)
-	self:scaleX(scaleX or 1)
-	self:scaleY(scaleY or scaleX)
+function Element.paragraph:scale(scaleX, scaleY, anchorX, anchorY)
+	self:scaleX(scaleX or 1, anchorX)
+	self:scaleY(scaleY or scaleX, anchorY)
 end
 
 function Element.paragraph:color(r, g, b, a)
@@ -770,6 +778,7 @@ function Ui:start()
 	end
 	self._selectedElement = nil
 	self._previousElement = nil
+	return self
 end
 
 --[[
