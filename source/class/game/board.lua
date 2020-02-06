@@ -1,4 +1,3 @@
-local charm = require 'lib.charm'
 local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
@@ -9,18 +8,19 @@ local util = require 'util'
 
 local Board = Object:extend()
 
-Board.size = 8
+Board.width = 8
+Board.height = 8
 Board.sizeOnScreen = .6
 Board.cursorLineWidth = .1
 Board.rollingScoreSpeed = 10
 Board.rollingScoreRoundUpThreshold = .4
 
 function Board:initTransform()
-	self.scale = constant.screenHeight * self.sizeOnScreen / self.size
+	self.scale = constant.screenHeight * self.sizeOnScreen / self.height
 	self.transform = love.math.newTransform()
 	self.transform:translate(constant.screenWidth / 2, constant.screenHeight / 2)
 	self.transform:scale(self.scale)
-	self.transform:translate(-self.size / 2, -self.size / 2)
+	self.transform:translate(-self.width / 2, -self.height / 2)
 end
 
 function Board:spawnTile(x, y, options)
@@ -30,8 +30,8 @@ end
 function Board:initTiles()
 	local tileOptions = {skipSpawnAnimation = true}
 	self.tiles = {}
-	for x = 0, self.size - 1 do
-		for y = 0, self.size - 1 do
+	for x = 0, self.width - 1 do
+		for y = 0, self.height - 1 do
 			self:spawnTile(x, y, tileOptions)
 		end
 	end
@@ -85,7 +85,7 @@ function Board:getTileAt(x, y)
 end
 
 function Board:squareAt(x, y)
-	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
+	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
 		'trying to detect squares out of bounds')
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -105,9 +105,9 @@ function Board:detectSquares()
 	util.clear(self.squares)
 	self.totalSquares = 0
 	local newSquares = 0
-	for x = 0, self.size - 2 do
-		for y = 0, self.size - 2 do
-			local index = y * self.size + x
+	for x = 0, self.width - 2 do
+		for y = 0, self.height - 2 do
+			local index = y * self.width + x
 			if self:squareAt(x, y) then
 				self.squares[index] = true
 				self.totalSquares = self.totalSquares + 1
@@ -128,7 +128,7 @@ function Board:detectSquares()
 end
 
 function Board:rotate(x, y, counterClockwise)
-	assert(x >= 0 and x <= self.size - 2 and y >= 0 and y <= self.size - 2,
+	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
 		'trying to rotate tiles out of bounds')
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -147,9 +147,9 @@ end
 function Board:clearTiles()
 	local sumTilesX, sumTilesY = 0, 0
 	local numClearedTiles = 0
-	for i = 0, self.size ^ 2 - 1 do
+	for i = 0, self.width * self.height - 1 do
 		if self.squares[i] then
-			local x, y = util.indexToCoordinates(self.size, i)
+			local x, y = util.indexToCoordinates(self.width, i)
 			for tileX = x, x + 1 do
 				for tileY = y, y + 1 do
 					local tile = self:getTileAt(tileX, tileY)
@@ -209,7 +209,7 @@ function Board:removeTiles()
 		local tile = self.tiles[i]
 		if tile.cleared then
 			table.remove(self.tiles, i)
-			local index = util.coordinatesToIndex(self.size, tile.x, tile.y)
+			local index = util.coordinatesToIndex(self.width, tile.x, tile.y)
 			table.insert(self.removedTiles, index)
 			minX = minX and math.min(minX, tile.x) or tile.x
 			minY = minY and math.min(minY, tile.y) or tile.y
@@ -220,7 +220,7 @@ function Board:removeTiles()
 		spawnAnimationMinY = minY,
 	}
 	for _, index in ipairs(self.removedTiles) do
-		local x, y = util.indexToCoordinates(self.size, index)
+		local x, y = util.indexToCoordinates(self.width, index)
 		self:spawnTile(x, y, tileOptions)
 	end
 	self:detectSquares()
@@ -228,10 +228,10 @@ end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
 	x, y = self.transform:inverseTransformPoint(x, y)
-	self.mouseInBounds = not (x < 0 or x > self.size or y < 0 or y > self.size)
+	self.mouseInBounds = not (x < 0 or x > self.width or y < 0 or y > self.height)
 	self.cursorX, self.cursorY = math.floor(x), math.floor(y)
-	self.cursorX = util.clamp(self.cursorX, 0, self.size - 2)
-	self.cursorY = util.clamp(self.cursorY, 0, self.size - 2)
+	self.cursorX = util.clamp(self.cursorX, 0, self.width - 2)
+	self.cursorY = util.clamp(self.cursorY, 0, self.height - 2)
 end
 
 function Board:mousepressed(x, y, button, istouch, presses)
@@ -262,9 +262,9 @@ function Board:drawSquareHighlights()
 	love.graphics.push 'all'
 	love.graphics.setColor(color.white)
 	love.graphics.setLineWidth(.05)
-	for i = 0, self.size ^ 2 - 1 do
+	for i = 0, self.width * self.height - 1 do
 		if self.squares[i] then
-			local x, y = util.indexToCoordinates(self.size, i)
+			local x, y = util.indexToCoordinates(self.width, i)
 			love.graphics.rectangle('line', x, y, 2, 2)
 		end
 	end
@@ -274,14 +274,14 @@ end
 function Board:drawHud()
 	if self.totalSquares > 0 then
 		local text = self.totalSquares == 1 and '1 square' or self.totalSquares .. ' squares'
-		local centerX, top = self.transform:transformPoint(self.size/2, self.size + 1/4)
+		local centerX, top = self.transform:transformPoint(self.width/2, self.height + 1/4)
 		self.pool.data.layout
 			:new('text', font.hud, text)
 				:centerX(centerX)
 				:top(top)
 				:scale(self.hudSquaresTextScale)
 	end
-	local centerX, bottom = self.transform:transformPoint(self.size/2, -1/4)
+	local centerX, bottom = self.transform:transformPoint(self.width/2, -1/4)
 	self.pool.data.layout
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
 			:centerX(centerX)
