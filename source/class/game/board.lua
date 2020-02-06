@@ -120,10 +120,10 @@ function Board:detectSquares()
 	end
 	if self.totalSquares > previousTotalSquares then
 		if self.hudSquaresTextScaleTween then
-			self.hudSquaresTextScaleTween:cancel()
+			self.hudSquaresTextScaleTween:stop()
 		end
 		self.hudSquaresTextScale = 1.1
-		self.hudSquaresTextScaleTween = self.pool.data.timers:tween(.15, self, {hudSquaresTextScale = 1})
+		self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
 	end
 	return newSquares
 end

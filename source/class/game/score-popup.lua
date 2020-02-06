@@ -7,10 +7,6 @@ local ScorePopup = Object:extend()
 ScorePopup.floatSpeed = 100
 ScorePopup.blinkSpeed = 3
 
-function ScorePopup:onFinishAnimation()
-	self.removeFromPool = true
-end
-
 function ScorePopup:new(pool, x, y, squares, score)
 	self.pool = pool
 	self.x = x
@@ -19,13 +15,12 @@ function ScorePopup:new(pool, x, y, squares, score)
 	self.score = score
 	self.blinkPhase = 0
 	self.scale = 0
-	self.pool.data.timers
-		:tween(.5, self, {scale = 1})
-			:ease('back', 'out')
-		:after(3/4)
-		:tween(1/4, self, {scale = 0})
-			:ease('power', 'in', 3)
-		:after(0, self.onFinishAnimation, self)
+	self.pool.data.tweens:to(self, .5, {scale = 1})
+		:ease 'backout'
+	:after(1/4, {scale = 0})
+		:ease 'cubicin'
+		:delay(3/4)
+		:oncomplete(function() self.removeFromPool = true end)
 end
 
 function ScorePopup:update(dt)

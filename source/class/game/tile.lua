@@ -31,9 +31,9 @@ function Tile:playSpawnAnimation(minX, minY)
 	self.scale = 0
 	local relativeX = self.x - minX
 	local relativeY = self.y - minY
-	self.pool.data.timers:after((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
-		:tween(self.spawnAnimationDuration, self, {scale = 1})
-			:ease('back', 'out')
+	self.pool.data.tweens:to(self, self.spawnAnimationDuration, {scale = 1})
+		:ease 'backout'
+		:delay((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
 end
 
 function Tile:new(pool, x, y, options)
@@ -70,10 +70,7 @@ end
 function Tile:rotate(corner, counterClockwise)
 	-- cancel any running rotation animation
 	if self.rotationAnimation.tween then
-		self.rotationAnimation.tween:cancel()
-	end
-	if self.rotationAnimation.flip then
-		self.rotationAnimation.flip.time = 0
+		self.rotationAnimation.tween:stop()
 	end
 	-- get the center of rotation (and while we're at it),
 	-- get the amount to change the tile's actual position
@@ -109,34 +106,29 @@ function Tile:rotate(corner, counterClockwise)
 	end
 	-- play the rotation animation
 	local angle = math.atan2(self.y + .5 - centerY, self.x + .5 - centerX)
+	self.rotationAnimation.playing = true
 	self.rotationAnimation.centerX = centerX
 	self.rotationAnimation.centerY = centerY
 	self.rotationAnimation.angle = angle
 	local angleIncrement = counterClockwise and -math.pi/2 or math.pi/2
-	self.rotationAnimation.tween = self.pool.data.timers:tween(
-		self.rotationAnimationDuration,
+	self.rotationAnimation.tween = self.pool.data.tweens:to(
 		self.rotationAnimation,
-		{angle = angle + angleIncrement})
-		:ease('back', 'out', 1.5)
-	self.rotationAnimation.flip = self.pool.data.timers:flip(
 		self.rotationAnimationDuration,
-		self.rotationAnimation,
-		'playing')
+		{angle = angle + angleIncrement}
+	)
+		:ease 'backout'
+		:oncomplete(function() self.rotationAnimation.playing = false end)
 	-- change the tile's actual position
 	self.x = self.x + deltaX
 	self.y = self.y + deltaY
 end
 
-function Tile:finishClearAnimation()
-	self.playingClearAnimation = false
-end
-
 function Tile:clear()
 	self.cleared = true
 	self.playingClearAnimation = true
-	self.pool.data.timers:tween(self.clearAnimationDuration, self, {scale = 0})
-		:ease('back', 'in')
-		:after(0, self.finishClearAnimation, self)
+	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
+		:ease 'backin'
+		:oncomplete(function() self.playingClearAnimation = false end)
 end
 
 function Tile:getDisplayPosition()
