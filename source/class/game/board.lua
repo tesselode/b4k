@@ -19,7 +19,6 @@ function Board:initTransform()
 	self.scale = constant.screenHeight * self.sizeOnScreen / self.size
 	self.transform = love.math.newTransform()
 	self.transform:translate(constant.screenWidth / 2, constant.screenHeight / 2)
-	self.transform:rotate(math.pi / 4)
 	self.transform:scale(self.scale)
 	self.transform:translate(-self.size / 2, -self.size / 2)
 end
@@ -40,7 +39,6 @@ end
 
 function Board:new(pool)
 	self.ui = charm.new()
-	self.sidewaysUi = charm.new()
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
@@ -285,17 +283,12 @@ function Board:drawHud()
 			:top(self.size + 1/4)
 			:scale(scale)
 	end
-	self.ui:draw()
-	love.graphics.push 'all'
-	love.graphics.rotate(-math.pi/2)
-	self.sidewaysUi
-		:start()
+	self.ui
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
-		:center(-self.size/2)
+		:center(self.size/2)
 		:bottom(-1/4)
 		:scale(1 / self.scale)
 		:draw()
-	love.graphics.pop()
 end
 
 function Board:draw()
