@@ -41,11 +41,8 @@ function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
-	self.previousSquares = {}
 	self.squares = {}
 	self.totalSquares = 0
-	self.clearedTiles = {}
-	self.removedTiles = {}
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
@@ -100,9 +97,8 @@ function Board:squareAt(x, y)
 end
 
 function Board:detectSquares()
-	util.clear(self.previousSquares)
-	util.copy(self.squares, self.previousSquares)
-	util.clear(self.squares)
+	local previousSquares = self.squares
+	self.squares = {}
 	self.totalSquares = 0
 	local newSquares = 0
 	for x = 0, self.width - 2 do
@@ -111,7 +107,7 @@ function Board:detectSquares()
 			if self:squareAt(x, y) then
 				self.squares[index] = true
 				self.totalSquares = self.totalSquares + 1
-				if not self.previousSquares[index] then
+				if not previousSquares[index] then
 					newSquares = newSquares + 1
 				end
 			end
@@ -146,6 +142,7 @@ end
 
 function Board:clearTiles()
 	local sumTilesX, sumTilesY = 0, 0
+	local clearedTiles = {}
 	local numClearedTiles = 0
 	for i = 0, self.width * self.height - 1 do
 		if self.squares[i] then
@@ -153,12 +150,12 @@ function Board:clearTiles()
 			for tileX = x, x + 1 do
 				for tileY = y, y + 1 do
 					local tile = self:getTileAt(tileX, tileY)
-					if tile and not self.clearedTiles[tile] then
+					if tile and not clearedTiles[tile] then
 						tile:clear()
 						sumTilesX = sumTilesX + tile.x
 						sumTilesY = sumTilesY + tile.y
 						numClearedTiles = numClearedTiles + 1
-						self.clearedTiles[tile] = true
+						clearedTiles[tile] = true
 					end
 				end
 			end
@@ -185,8 +182,6 @@ function Board:clearTiles()
 		scoreIncrement
 	))
 
-	-- reset some data
-	util.clear(self.clearedTiles)
 	util.clear(self.squares)
 
 	-- queue up a tile removal pass if needed
@@ -196,7 +191,7 @@ function Board:clearTiles()
 end
 
 function Board:removeTiles()
-	util.clear(self.removedTiles)
+	local removedTiles = {}
 	--[[
 		minX and minY are the minimum tile x and y values
 		out of all the tiles removed in this sweep. These
@@ -210,7 +205,7 @@ function Board:removeTiles()
 		if tile.cleared then
 			table.remove(self.tiles, i)
 			local index = util.coordinatesToIndex(self.width, tile.x, tile.y)
-			table.insert(self.removedTiles, index)
+			table.insert(removedTiles, index)
 			minX = minX and math.min(minX, tile.x) or tile.x
 			minY = minY and math.min(minY, tile.y) or tile.y
 		end
@@ -219,7 +214,7 @@ function Board:removeTiles()
 		spawnAnimationMinX = minX,
 		spawnAnimationMinY = minY,
 	}
-	for _, index in ipairs(self.removedTiles) do
+	for _, index in ipairs(removedTiles) do
 		local x, y = util.indexToCoordinates(self.width, index)
 		self:spawnTile(x, y, tileOptions)
 	end

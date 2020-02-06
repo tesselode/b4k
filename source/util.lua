@@ -28,8 +28,4 @@ function util.clear(t)
 	for k in pairs(t) do t[k] = nil end
 end
 
-function util.copy(t1, t2)
-	for k, v in pairs(t1) do t2[k] = v end
-end
-
 return util
