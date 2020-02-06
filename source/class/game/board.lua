@@ -103,7 +103,6 @@ function Board:detectSquares()
 	util.clear(self.previousSquares)
 	util.copy(self.squares, self.previousSquares)
 	util.clear(self.squares)
-	local previousTotalSquares = self.totalSquares
 	self.totalSquares = 0
 	local newSquares = 0
 	for x = 0, self.size - 2 do
@@ -118,7 +117,7 @@ function Board:detectSquares()
 			end
 		end
 	end
-	if self.totalSquares > previousTotalSquares then
+	if newSquares > 0 then
 		if self.hudSquaresTextScaleTween then
 			self.hudSquaresTextScaleTween:stop()
 		end
