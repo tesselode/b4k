@@ -72,7 +72,7 @@ function Tile:rotate(corner, counterClockwise)
 	if self.rotationAnimation.tween then
 		self.rotationAnimation.tween:stop()
 	end
-	-- get the center of rotation (and while we're at it),
+	-- get the center of rotation, and while we're at it,
 	-- get the amount to change the tile's actual position
 	local centerX, centerY, deltaX, deltaY
 	if corner == 'topLeft' then

@@ -15,6 +15,11 @@ Board.cursorLineWidth = .1
 Board.rollingScoreSpeed = 10
 Board.rollingScoreRoundUpThreshold = .4
 
+--[[
+	initializes the transform used for drawing and converting
+	mouse coordinates to board coordinates. in the board
+	coordinate system, each tile is 1 unit square
+]]
 function Board:initTransform()
 	self.scale = constant.screenHeight * self.sizeOnScreen / self.height
 	self.transform = love.math.newTransform()
@@ -54,6 +59,8 @@ function Board:new(pool)
 	self.rollingScore = 0
 end
 
+-- returns if the board is free to do the next queued action
+-- (or to rotate tiles, which has slightly different conditions)
 function Board:isFree(toRotate)
 	for _, tile in ipairs(self.tiles) do
 		if not tile:isFree(toRotate) then return false end
@@ -62,15 +69,23 @@ function Board:isFree(toRotate)
 	return true
 end
 
-function Board:update(dt)
+function Board:flushQueue()
 	while self:isFree() and #self.queue > 0 do
 		self.queue[1](self)
 		table.remove(self.queue, 1)
 	end
+end
+
+function Board:updateRollingScore(dt)
 	self.rollingScore = util.lerp(self.rollingScore, self.score, self.rollingScoreSpeed * dt)
 	if self.rollingScore > self.score - self.rollingScoreRoundUpThreshold then
 		self.rollingScore = self.score
 	end
+end
+
+function Board:update(dt)
+	self:flushQueue()
+	self:updateRollingScore(dt)
 end
 
 function Board:getTileAt(x, y)
@@ -81,6 +96,8 @@ function Board:getTileAt(x, y)
 	end
 end
 
+-- returns if there's a 2x2 square of same-colored tiles
+-- with the top-left corner at (x, y)
 function Board:squareAt(x, y)
 	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
 		'trying to detect squares out of bounds')
@@ -96,6 +113,7 @@ function Board:squareAt(x, y)
 		and bottomRight.color == bottomLeft.color
 end
 
+-- checks for new matching-color squares
 function Board:detectSquares()
 	local previousSquares = self.squares
 	self.squares = {}
@@ -114,15 +132,12 @@ function Board:detectSquares()
 		end
 	end
 	if newSquares > 0 then
-		if self.hudSquaresTextScaleTween then
-			self.hudSquaresTextScaleTween:stop()
-		end
-		self.hudSquaresTextScale = 1.1
-		self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
+		self:playSquaresTextPulseAnimation()
 	end
 	return newSquares
 end
 
+-- rotates a 2x2 square of tiles with the top-left corner at (x, y)
 function Board:rotate(x, y, counterClockwise)
 	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
 		'trying to rotate tiles out of bounds')
@@ -140,7 +155,15 @@ function Board:rotate(x, y, counterClockwise)
 	end
 end
 
+-- marks tiles that are in matching-color squares as cleared
+-- and plays the clear animation. also awards points for those squares
 function Board:clearTiles()
+	--[[
+		the sum of the x and y positions of each tile.
+		this is used to get the average position of all the cleared
+		tiles because we're going to spawn the score popup
+		there (it looks nicer that way)
+	]]
 	local sumTilesX, sumTilesY = 0, 0
 	local clearedTiles = {}
 	local numClearedTiles = 0
@@ -190,6 +213,8 @@ function Board:clearTiles()
 	end
 end
 
+-- actually removes tiles from the board once they've
+-- finished their clear animation
 function Board:removeTiles()
 	local removedTiles = {}
 	--[[
@@ -210,6 +235,7 @@ function Board:removeTiles()
 			minY = minY and math.min(minY, tile.y) or tile.y
 		end
 	end
+	-- spawn new tiles to fill the holes
 	local tileOptions = {
 		spawnAnimationMinX = minX,
 		spawnAnimationMinY = minY,
@@ -237,6 +263,14 @@ function Board:mousepressed(x, y, button, istouch, presses)
 			self:rotate(self.cursorX, self.cursorY)
 		end
 	end
+end
+
+function Board:playSquaresTextPulseAnimation()
+	if self.hudSquaresTextScaleTween then
+		self.hudSquaresTextScaleTween:stop()
+	end
+	self.hudSquaresTextScale = 1.1
+	self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
 end
 
 function Board:drawTiles()
