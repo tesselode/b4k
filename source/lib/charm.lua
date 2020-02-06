@@ -1,10 +1,11 @@
+--- Layout library for LÖVE.
 local charm = {
 	_VERSION = 'charm',
 	_DESCRIPTION = 'Layout library for LÖVE.',
 	_LICENSE = [[
 		MIT License
 
-		Copyright (c) 2019 Andrew Minnich
+		Copyright (c) 2020 Andrew Minnich
 
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +27,83 @@ local charm = {
 	]]
 }
 
-local numberOfMouseButtons = 3
+-- gets the type of a value
+-- also works with LOVE types
+local function getType(value)
+	return type(value) == 'userdata' and value.type and value:type() or type(value)
+end
+
+-- gets the error level needed to make an error appear
+-- in the user's code, not the library code
+local function getUserErrorLevel()
+	local source = debug.getinfo(1).source
+	local level = 1
+	while debug.getinfo(level).source == source do
+		level = level + 1
+	end
+	--[[
+		we return level - 1 here and not just level
+		because the level was calculated one function
+		deeper than the function that will actually
+		use this value. if we produced an error *inside*
+		this function, level would be correct, but
+		for the function calling this function, level - 1
+		is correct.
+	]]
+	return level - 1
+end
+
+-- gets the name of the function that the user called
+-- that eventually caused an error
+local function getUserCalledFunctionName()
+	return debug.getinfo(getUserErrorLevel() - 1).name
+end
+
+local function checkCondition(condition, message)
+	if condition then return end
+	error(message, getUserErrorLevel())
+end
+
+-- changes a list of types into a human-readable phrase
+-- i.e. string, table, number -> "string, table, or number"
+local function getAllowedTypesText(...)
+	local numberOfArguments = select('#', ...)
+	if numberOfArguments >= 3 then
+		local text = ''
+		for i = 1, numberOfArguments - 1 do
+			text = text .. string.format('%s, ', select(i, ...))
+		end
+		text = text .. string.format('or %s', select(numberOfArguments, ...))
+		return text
+	elseif numberOfArguments == 2 then
+		return string.format('%s or %s', select(1, ...), select(2, ...))
+	end
+	return select(1, ...)
+end
+
+-- checks if an argument is of the correct type, and if not,
+-- throws a "bad argument" error consistent with the ones
+-- lua and love produce
+local function checkArgument(argumentIndex, argument, ...)
+	for i = 1, select('#', ...) do
+		if getType(argument) == select(i, ...) then return end
+	end
+	error(
+		string.format(
+			"bad argument #%i to '%s' (expected %s, got %s)",
+			argumentIndex,
+			getUserCalledFunctionName(),
+			getAllowedTypesText(...),
+			getType(argument)
+		),
+		getUserErrorLevel()
+	)
+end
+
+local function checkOptionalArgument(argumentIndex, argument, ...)
+	if argument == nil then return end
+	checkArgument(argumentIndex, argument, ...)
+end
 
 -- gets the total number of lines in a string
 local function numberOfLines(s)
@@ -54,283 +131,482 @@ local function getParagraphHeight(font, text, limit)
 	return #lines * font:getHeight() * font:getLineHeight()
 end
 
+local function sortChildren(a, b)
+	return a:get 'z' < b:get 'z'
+end
+
 local function newElementClass(parent)
-	local class = setmetatable({}, parent)
+	local class = {
+		parent = parent,
+		get = setmetatable({}, {
+			__index = parent and parent.get,
+			__call = function(_, self, propertyName, ...)
+				return self.get[propertyName](self, ...)
+			end
+		}),
+		preserve = setmetatable({}, {__index = parent and parent.preserve}),
+	}
 	class.__index = class
-	class.get = setmetatable({}, {__index = parent and parent.get})
-	class.preserve = setmetatable({}, {__index = parent and parent.preserve})
+	setmetatable(class, {__index = parent})
 	return class
 end
 
--- the function used for sorting elements while drawing
-local function sortElements(a, b)
-	return (a._z or 0) < (b._z or 0)
-end
-
 --[[
-	-- Element classes --
+	A note on how data is managed in Charm:
 
-	Each element class represents a type of element you can draw
-	(i.e. rectangle, image, etc.). Each class provides:
-	- a constructor function, used by ui.new
-	- getters, used by ui.get and contained in class.get
-	- setters and other functions that can be called via ui[functionName]
-	- callback functions, such as drawSelf and stencil
+	Charm aims to be as memory-efficient as possible. You'll
+	see a couple of principles throughout the code:
+	- Tables are only created when they're first needed
+	- Tables are cleared out and reused whenever possible
+
+	This is how the Layout class is able to recreate the
+	element tree every frame without creating a lot of
+	garbage - a pool of previously created element tables
+	is kept around, and when a frame is finished, they're
+	cleared out and reused. Nested tables are also
+	cleared out one level deep.
+
+	What this means for the code for element classes:
+	- We cannot rely on a value still being there next frame
+	(unless the key is listed in the preserve table)
+	- We treat empty tables or nonexistent tables as being "unset"
 ]]
 
-local Element = {}
+--- The base class for all elements.
+-- @type Element
+local Element = newElementClass()
 
---[[
-	The base class is used by all other element classes. It provides
-	a lot of functionality common to every element, such as
-	position getting/setting and the main drawing and mouse event
-	logic.
-]]
-Element.base = newElementClass()
+--- A list of keys that should not be niled out at the end of a draw frame.
+-- @table preserve
+Element.preserve._stencilFunction = true
 
---[[
-	The preserve table defines keys that will not be niled out
-	after a frame is drawn.
-]]
-Element.base.preserve.preserve = true
-Element.base.preserve.ui = true
-Element.base.preserve._stencilFunction = true
-
-function Element.base:getState()
-	return self.ui:getState(self)
-end
-
-function Element.base:new(x, y, width, height)
-	self._x = x or 0
-	self._y = y or 0
-	self._z = 0
-	self._width = width or 0
-	self._height = height or 0
-end
-
-function Element.base:containsPoint(x, y)
-	return x >= self._x and x <= self._x + self._width
-		and y >= self._y and y <= self._y + self._height
-end
-
-function Element.base.get:x(anchor)
-	anchor = anchor or 0
-	return self._x + self._width * anchor
-end
-
-function Element.base.get:left() return self.get.x(self, 0) end
-function Element.base.get:center() return self.get.x(self, .5) end
-function Element.base.get:right() return self.get.x(self, 1) end
-
-function Element.base.get:y(anchor)
-	anchor = anchor or 0
-	return self._y + self._height * anchor
-end
-
-function Element.base.get:top() return self.get.y(self, 0) end
-function Element.base.get:middle() return self.get.y(self, .5) end
-function Element.base.get:bottom() return self.get.y(self, 1) end
-
-function Element.base.get:z() return self._z end
-
-function Element.base.get:width() return self._width end
-function Element.base.get:height() return self._height end
-
-function Element.base.get:size()
-	return self.get.width(self), self.get.height(self)
-end
-
-function Element.base.get:hovered()
-	local state = self:getState()
-	return state and state.hovered
-end
-
-function Element.base.get:entered()
-	local state = self:getState()
-	return state and state.entered
-end
-
-function Element.base.get:exited()
-	local state = self:getState()
-	return state and state.exited
-end
-
-function Element.base.get:held(button)
-	button = button or 1
-	local state = self:getState()
-	return state and state.held and state.held[button]
-end
-
-function Element.base.get:pressed(button)
-	button = button or 1
-	local state = self:getState()
-	return state and state.pressed and state.pressed[button]
-end
-
-function Element.base.get:released(button)
-	button = button or 1
-	local state = self:getState()
-	return state and state.released and state.released[button]
-end
-
-function Element.base.get:dragged(button)
-	button = button or 1
-	local state = self:getState()
-	if not (state and state.held and state.held[button]) then
-		return false
-	end
-	if self.ui._mouseX == self.ui._mouseXPrevious and self.ui._mouseY == self.ui._mouseYPrevious then
-		return false
-	end
-	return true, self.ui._mouseX - self.ui._mouseXPrevious, self.ui._mouseY - self.ui._mouseYPrevious
-end
-
-function Element.base:x(x, anchor)
-	anchor = anchor or 0
-	self._anchorX = anchor
-	self._x = x - self._width * anchor
-end
-
-function Element.base:left(x) return self:x(x, 0) end
-function Element.base:center(x) return self:x(x, .5) end
-function Element.base:right(x) return self:x(x, 1) end
-
-function Element.base:y(y, anchor)
-	anchor = anchor or 0
-	self._anchorY = anchor
-	self._y = y - self._height * anchor
-end
-
-function Element.base:top(y) return self:y(y, 0) end
-function Element.base:middle(y) return self:y(y, .5) end
-function Element.base:bottom(y) return self:y(y, 1) end
-
-function Element.base:z(z)
-	self._z = z
-end
-
-function Element.base:shift(dx, dy)
-	self._x = self._x + (dx or 0)
-	self._y = self._y + (dy or 0)
-end
-
-function Element.base:width(width, anchorX)
-	anchorX = anchorX or self._anchorX or 0
-	local previousX = self.get.x(self, anchorX)
+--- Initializes the element.
+-- @number[opt=0] x the x position of the element
+-- @number[opt=0] y the y position of the element
+-- @number[opt=0] width the width of the element
+-- @number[opt=0] height the height of the element
+function Element:new(x, y, width, height)
+	checkOptionalArgument(2, x, 'number')
+	checkOptionalArgument(3, y, 'number')
+	checkOptionalArgument(4, width, 'number')
+	checkOptionalArgument(5, height, 'number')
+	self._x = x
+	self._y = y
 	self._width = width
-	self:x(previousX, anchorX)
-end
-
-function Element.base:height(height, anchorY)
-	anchorY = anchorY or self._anchorY or 0
-	local previousY = self.get.y(self, anchorY)
 	self._height = height
-	self:y(previousY, anchorY)
 end
 
-function Element.base:size(width, height, anchorX, anchorY)
-	self:width(width, anchorX)
-	self:height(height, anchorY)
+--- Returns whether the element has any children.
+-- @treturn boolean
+function Element:hasChildren()
+	return self._children and #self._children > 0
 end
 
-function Element.base:name(name)
-	self._name = name
+--- Returns whether a color is set.
+-- @string color the name of the color to check
+-- @treturn boolean
+function Element:isColorSet(color)
+	return color and #color > 0
 end
 
-function Element.base:clip()
-	self._clip = true
+--- Sets a color property on an element.
+-- @string propertyName the name of the property to set
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Element:setColor(propertyName, r, g, b, a)
+	if type(r) ~= 'table' then
+		checkArgument(1, r, 'number', 'table')
+		checkArgument(2, g, 'number')
+		checkArgument(3, b, 'number')
+		checkOptionalArgument(4, a, 'number')
+	end
+	self[propertyName] = self[propertyName] or {}
+	if type(r) == 'table' then
+		--[[
+			You might be wondering, if r is already a table,
+			why not just set self[propertyName] to r?
+			The color table gets cleared after each draw.
+			If we make self[propertyName] a reference to the
+			table the user provided, then we'll end up
+			clearing that table. The user might actually
+			want to keep that table. So to avoid clobbering
+			the user's data, we just copy the values from their
+			table to our own.
+		]]
+		self[propertyName][1] = r[1]
+		self[propertyName][2] = r[2]
+		self[propertyName][3] = r[3]
+		self[propertyName][4] = r[4]
+	else
+		self[propertyName][1] = r
+		self[propertyName][2] = g
+		self[propertyName][3] = b
+		self[propertyName][4] = a
+	end
 end
 
-function Element.base:transparent()
-	self._transparent = true
+--- Gets the x position of the element.
+-- @number[opt=0] origin the origin to get the x position with respect to. 0 = left, .5 = center, 1 = right
+-- @treturn number
+function Element.get:x(origin)
+	checkOptionalArgument(3, origin, 'number')
+	origin = origin or 0
+	return (self._x or 0) + self:get 'width' * origin
 end
 
-function Element.base:opaque()
-	self._transparent = false
+--- Gets the x position of the left edge of the element.
+-- @treturn number
+function Element.get:left() return self:get('x', 0) end
+
+--- Gets the x position of the horizontal center of the element.
+-- @treturn number
+function Element.get:centerX() return self:get('x', .5) end
+
+--- Gets the x position of the right edge of the element.
+-- @treturn number
+function Element.get:right() return self:get('x', 1) end
+
+--- Gets the y position of the element.
+-- @number[opt=0] origin the origin to get the y position with respect to. 0 = top, .5 = center, 1 = bottom
+-- @treturn number
+function Element.get:y(origin)
+	checkOptionalArgument(3, origin, 'number')
+	origin = origin or 0
+	return (self._y or 0) + self:get 'height' * origin
 end
 
--- Adjusts the element to perfectly surround all of its children (with an optional
--- amount of padding). Children's local positions will be adjusted so they have
--- the same position on screen after the wrap is complete.
-function Element.base:wrap(padding)
-	padding = padding or 0
-	-- get the bounds of the children
+--- Gets the y position of the top of the element.
+-- @treturn number
+function Element.get:top() return self:get('y', 0) end
+
+--- Gets the y position of the vertical center of the element.
+-- @treturn number
+function Element.get:centerY() return self:get('y', .5) end
+
+--- Gets the y position of the bottom of the element.
+-- @treturn number
+function Element.get:bottom() return self:get('y', 1) end
+
+--- Gets the z position of the element.
+-- @treturn number
+function Element.get:z() return self._z or 0 end
+
+--- Gets the width of the element.
+-- @treturn number
+function Element.get:width() return self._width or 0 end
+
+--- Gets the height of the element.
+-- @treturn number
+function Element.get:height() return self._height or 0 end
+
+--- Gets the width and height of the element.
+-- @treturn number the width of the element
+-- @treturn number the height of the element
+function Element.get:size()
+	return self:get 'width', self:get 'height'
+end
+
+--- Gets the bounds of the rectangle surrounding all of
+-- the elements children (relative to the top-left corner
+-- of the element).
+-- @treturn number the left bound of the children
+-- @treturn number the top bound of the children
+-- @treturn number the right bound of the children
+-- @treturn number the bottom bound of the children
+function Element.get:childrenBounds()
+	if not self:hasChildren() then return end
 	local left, top, right, bottom
 	for _, child in ipairs(self._children) do
-		left = left and math.min(left, child._x) or child._x
-		top = top and math.min(top, child._y) or child._y
-		right = right and math.max(right, child._x + child._width) or child._x + child._width
-		bottom = bottom and math.max(bottom, child._y + child._height) or child._y + child._height
+		local childLeft = child.get.left(child)
+		local childTop = child.get.top(child)
+		local childRight = child.get.right(child)
+		local childBottom = child.get.bottom(child)
+		left = left and math.min(left, childLeft) or childLeft
+		top = top and math.min(top, childTop) or childTop
+		right = right and math.max(right, childRight) or childRight
+		bottom = bottom and math.max(bottom, childBottom) or childBottom
 	end
-	-- apply padding
-	left = left - padding
-	top = top - padding
-	right = right + padding
-	bottom = bottom + padding
-	-- change the parent position and size
+	return left, top, right, bottom
+end
+
+--- Sets the x position of the element.
+-- @number x the new x position of the element
+-- @number[opt=0] origin the origin to set the position with respect to. 0 = left, .5 = center, 1 = right
+function Element:x(x, origin)
+	checkArgument(1, x, 'number')
+	checkOptionalArgument(2, origin, 'number')
+	origin = origin or 0
+	self._originX = origin
+	self._x = x - self:get 'width' * origin
+end
+
+--- Moves the left edge of the element to the specified x position.
+-- @number x
+function Element:left(x) self:x(x, 0) end
+
+--- Moves the horizontal center of the element to the specified x position.
+-- @number x
+function Element:centerX(x) self:x(x, .5) end
+
+--- Moves the right edge of the element to the specified x position.
+-- @number x
+function Element:right(x) self:x(x, 1) end
+
+--- Sets the y position of the element.
+-- @number y the new y position of the element
+-- @number[opt=0] origin the origin to set the position with respect to. 0 = top, .5 = center, 1 = bottom
+function Element:y(y, origin)
+	checkArgument(1, y, 'number')
+	checkOptionalArgument(2, origin, 'number')
+	origin = origin or 0
+	self._originY = origin
+	self._y = y - self:get 'height' * origin
+end
+
+--- Moves the top of the element to the specified y position.
+-- @number y
+function Element:top(y) self:y(y, 0) end
+
+--- Moves the vertical center of the element to the specified y position.
+-- @number y
+function Element:centerY(y) self:y(y, .5) end
+
+--- Moves the bottom of the element to the specified y position.
+-- @number y
+function Element:bottom(y) self:y(y, 1) end
+
+--- Sets the z position of the element.
+-- @number z
+function Element:z(z) self._z = z end
+
+--- Moves the element.
+-- @number dx the amount to move the element horizontally
+-- @number dy the amount to move the element vertically
+function Element:shift(dx, dy)
+	checkOptionalArgument(1, dx, 'number')
+	checkOptionalArgument(2, dy, 'number')
+	self._x = self:get 'x' + (dx or 0)
+	self._y = self:get 'y' + (dy or 0)
+end
+
+--- Sets the width of the element.
+-- @number width
+function Element:width(width)
+	checkArgument(1, width, 'number')
+	local origin = self._originX or 0
+	local x = self:get('x', origin)
+	self._width = width
+	self:x(x, origin)
+end
+
+--- Sets the height of the element.
+-- @number height
+function Element:height(height)
+	checkArgument(1, height, 'number')
+	local origin = self._originY or 0
+	local y = self:get('y', origin)
+	self._height = height
+	self:y(y, origin)
+end
+
+--- Sets the width and height of the element.
+-- @number width
+-- @number height
+function Element:size(width, height)
+	self:width(width)
+	self:height(height)
+end
+
+--- Sets the element's position and size to match the specified bounds.
+-- @number left
+-- @number top
+-- @number right
+-- @number bottom
+function Element:bounds(left, top, right, bottom)
+	checkArgument(1, left, 'number')
+	checkArgument(2, top, 'number')
+	checkArgument(3, right, 'number')
+	checkArgument(4, bottom, 'number')
 	self._x = left
 	self._y = top
 	self._width = right - left
 	self._height = bottom - top
-	-- adjust the children's positions
-	for _, child in ipairs(self._children) do
-		child._x = child._x - left
-		child._y = child._y - top
-	end
-	return self
 end
 
-function Element.base:onAddChild(element)
+--- Enables clipping for this element, meaning that children will be cropped
+-- to the visible area of the element.
+function Element:clip()
+	self._clip = true
+end
+
+--- Adds a child to the element.
+-- @tparam Element child
+function Element:addChild(child)
 	self._children = self._children or {}
-	table.insert(self._children, element)
+	table.insert(self._children, child)
 end
 
-function Element.base:stencil()
-	love.graphics.rectangle('fill', 0, 0, self._width, self._height)
+--- Called when a @{Layout} starts assigning children to this element.
+-- @param ... additional arguments passed to layout.beginChildren
+function Element:onBeginChildren(...) end
+
+--- Called when a @{Layout} adds a child to this element.
+-- @tparam Element child the child to add
+function Element:onAddChild(child)
+	self:addChild(child)
 end
 
-function Element.base:draw(stencilValue, dx, dy, mouseClipped)
+--- Called when a @{Layout} stops assigning children to this element.
+-- @param ... additional arguments passed to layout.endChildren
+function Element:onEndChildren(...) end
+
+--- Moves the element's children.
+-- @number dx the amount to move the children horizontally
+-- @number dy the amount to move the children vertically
+function Element:shiftChildren(dx, dy)
+	checkOptionalArgument(1, dx, 'number')
+	checkOptionalArgument(2, dy, 'number')
+	if not self:hasChildren() then return end
+	for _, child in ipairs(self._children) do
+		child:shift(dx, dy)
+	end
+end
+
+--- Expands the element to the left. Children's positions
+-- will be adjusted as necessary to maintain their position
+-- on screen.
+-- @number padding the amount to expand the element
+function Element:padLeft(padding)
+	checkArgument(1, padding, 'number')
+	self._x = self:get 'x' - padding
+	self:shiftChildren(padding, 0)
+	self._width = self:get 'width' + padding
+end
+
+--- Expands the element upward. Children's positions
+-- will be adjusted as necessary to maintain their position
+-- on screen.
+-- @number padding the amount to expand the element
+function Element:padTop(padding)
+	checkArgument(1, padding, 'number')
+	self._y = self:get 'y' - padding
+	self:shiftChildren(0, padding)
+	self._height = self:get 'height' + padding
+end
+
+--- Expands the element to the right.
+-- @number padding the amount to expand the element
+function Element:padRight(padding)
+	checkArgument(1, padding, 'number')
+	self._width = self:get 'width' + padding
+end
+
+--- Expands the element downward.
+-- @number padding the amount to expand the element
+function Element:padBottom(padding)
+	checkArgument(1, padding, 'number')
+	self._height = self:get 'height' + padding
+end
+
+--- Expands the element equally to the left and right.
+-- Children's positions will be adjusted as necessary to
+-- maintain their position on screen.
+-- @number padding the amount to expand the element
+function Element:padX(padding)
+	checkArgument(1, padding, 'number')
+	self:padLeft(padding)
+	self:padRight(padding)
+end
+
+--- Expands the element equally upwards and downwards.
+-- Children's positions will be adjusted as necessary to
+-- maintain their position on screen.
+-- @number padding the amount to expand the element
+function Element:padY(padding)
+	checkArgument(1, padding, 'number')
+	self:padTop(padding)
+	self:padBottom(padding)
+end
+
+--- Expands the element on all sides.
+-- Children's positions will be adjusted as necessary to
+-- maintain their position on screen.
+-- @number padding the amount to expand the element
+function Element:pad(padding)
+	checkArgument(1, padding, 'number')
+	self:padX(padding)
+	self:padY(padding)
+end
+
+--- Grows an element until it contains all of its children.
+-- The children's positions will be adjusted as necessary
+-- to maintain the same position on screen.
+function Element:expand()
+	if not self:hasChildren() then return end
+	local left, top, right, bottom = self:get 'childrenBounds'
+	left = math.min(left, 0)
+	top = math.min(top, 0)
+	right = math.max(right, self:get 'width')
+	bottom = math.max(bottom, self:get 'height')
+	self:shiftChildren(-left, -top)
+	self:shift(left, top)
+	self._width = right - left
+	self._height = bottom - top
+end
+
+--- Adjusts the element's dimensions so that it perfectly
+-- surrounds its children. The children's positions will be
+-- adjusted to maintain the same position on screen.
+function Element:wrap()
+	if not self:hasChildren() then return end
+	local left, top, right, bottom = self:get 'childrenBounds'
+	self:shiftChildren(-left, -top)
+	self:shift(left, top)
+	self._width = right - left
+	self._height = bottom - top
+end
+
+--- Called before drawing the element's children.
+function Element:drawBottom() end
+
+--- Called after drawing the element's children.
+function Element:drawTop() end
+
+--- Defines the area to crop the element's children to
+-- if clipping is enabled.
+function Element:stencil() end
+
+--- Draws the element. In most cases, you won't need
+-- to manually call this function or override it in
+-- custom element classes.
+-- @number stencilValue the pixel value to use to mask the
+-- element. This should increase by 1 for every nested
+-- child element.
+function Element:draw(stencilValue)
 	stencilValue = stencilValue or 0
-	dx, dy = dx or 0, dy or 0
-	-- call the beforeDraw callback
-	if self.beforeDraw then self:beforeDraw() end
-	-- check if the element is hovered
-	local mouseX, mouseY = love.mouse.getPosition()
-	mouseX, mouseY = mouseX - dx, mouseY - dy
-	local hovered = self:containsPoint(mouseX, mouseY)
-	--[[
-		if clipping is enabled, tell children that the mouse is
-		outside the parent's visible region so they know
-		they're not hovered
-	]]
-	if self._clip and not hovered then mouseClipped = true end
-	-- draw self and children
 	love.graphics.push 'all'
-	love.graphics.translate(self._x, self._y)
-	if self.drawSelf then self:drawSelf() end
-	if self._children and #self._children > 0 then
-		table.sort(self._children, sortElements)
+	love.graphics.translate(self:get 'x', self:get 'y')
+	self:drawBottom()
+	if self._children then
+		-- sort children
+		if #self._children > 1 then
+			table.sort(self._children, sortChildren)
+		end
 		-- if clipping is enabled, push a stencil to the "stack"
 		if self._clip then
+			stencilValue = stencilValue + 1
 			love.graphics.push 'all'
 			self._stencilFunction = self._stencilFunction or function()
 				self:stencil()
 			end
 			love.graphics.stencil(self._stencilFunction, 'increment', 1, true)
-			love.graphics.setStencilTest('gequal', stencilValue + 1)
+			love.graphics.setStencilTest('gequal', stencilValue)
 		end
 		-- draw children
 		for _, child in ipairs(self._children) do
-			if child.draw then
-				local childHovered = child:draw(stencilValue + 1, self._x + dx, self._y + dy, mouseClipped)
-				--[[
-					if the child is hovered and not transparent, then it should block
-					the parent from being hovered
-				]]
-				if childHovered and not child._transparent then
-					hovered = false
-				end
-			end
+			child:draw(stencilValue)
 		end
 		-- if clipping is enabled, pop a stencil from the "stack"
 		if self._clip then
@@ -338,461 +614,637 @@ function Element.base:draw(stencilValue, dx, dy, mouseClipped)
 			love.graphics.pop()
 		end
 	end
-	love.graphics.pop()
-	-- update mouse state
-	-- if the parent tells us the mouse is clipped,
-	-- we know we aren't hovered
-	if mouseClipped then hovered = false end
-	-- update the persistent state (if available)
-	local state = self:getState()
-	if state then
-		local mouseDown = self.ui._mouseDown
-		local mouseDownPrevious = self.ui._mouseDownPrevious
-		-- update hovered/entered/exited state
-		state.entered = false
-		state.exited = false
-		if hovered and not state.hovered then
-			state.hovered = true
-			state.entered = true
-		end
-		if state.hovered and not hovered then
-			state.hovered = false
-			state.exited = true
-		end
-		-- update held/pressed/released state
-		state.held = state.held or {}
-		state.pressed = state.pressed or {}
-		state.released = state.released or {}
-		for i = 1, numberOfMouseButtons do
-			state.pressed[i] = false
-			state.released[i] = false
-			if hovered and mouseDown[i] and not mouseDownPrevious[i] then
-				state.held[i] = true
-				state.pressed[i] = true
-			end
-			if state.held[i] and not mouseDown[i] then
-				state.held[i] = false
-				if hovered then
-					state.released[i] = true
-				end
-			end
-		end
-	end
-	-- call the afterDraw callback
-	if self.afterDraw then self:afterDraw() end
-	-- tell any parent element if this element is hovered or not
-	return hovered
-end
-
-Element.rectangle = newElementClass(Element.base)
-
-function Element.rectangle:fillColor(r, g, b, a)
-	self._fillColor = self._fillColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._fillColor[i] = r[i] end
-	else
-		self._fillColor[1] = r
-		self._fillColor[2] = g
-		self._fillColor[3] = b
-		self._fillColor[4] = a
-	end
-end
-
-function Element.rectangle:outlineColor(r, g, b, a)
-	self._outlineColor = self._outlineColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._outlineColor[i] = r[i] end
-	else
-		self._outlineColor[1] = r
-		self._outlineColor[2] = g
-		self._outlineColor[3] = b
-		self._outlineColor[4] = a
-	end
-end
-
-function Element.rectangle:outlineWidth(width)
-	self._outlineWidth = width
-end
-
-function Element.rectangle:cornerRadiusX(radius)
-	self._cornerRadiusX = radius
-end
-
-function Element.rectangle:cornerRadiusY(radius)
-	self._cornerRadiusY = radius
-end
-
-function Element.rectangle:cornerRadius(radiusX, radiusY)
-	self._cornerRadiusX = radiusX
-	self._cornerRadiusY = radiusY
-end
-
-function Element.rectangle:cornerSegments(segments)
-	self._cornerSegments = segments
-end
-
-function Element.rectangle:stencil()
-	love.graphics.rectangle('fill', 0, 0, self._width, self._height,
-		self._cornerRadiusX, self._cornerRadiusY, self._cornerSegments or 64)
-end
-
-function Element.rectangle:drawSelf()
-	love.graphics.push 'all'
-	if self._fillColor and #self._fillColor > 1 then
-		love.graphics.setColor(self._fillColor)
-		love.graphics.rectangle('fill', 0, 0, self._width, self._height,
-			self._cornerRadiusX, self._cornerRadiusY, self._cornerSegments or 64)
-	end
-	if self._outlineColor and #self._outlineColor > 1 then
-		love.graphics.setColor(self._outlineColor)
-		love.graphics.setLineWidth(self._outlineWidth or 1)
-		love.graphics.rectangle('line', 0, 0, self._width, self._height,
-			self._cornerRadiusX, self._cornerRadiusY, self._cornerSegments)
-	end
-	love.graphics.pop()
-end
-
-Element.ellipse = newElementClass(Element.base)
-
-function Element.ellipse:containsPoint(x, y)
-	local cx, cy = self._x + self._width/2, self._y + self._height/2
-	local rx, ry = self._width/2, self._height/2
-	return ((x - cx) ^ 2) / (rx ^ 2) + ((y - cy) ^ 2) / (ry ^ 2) <= 1
-end
-
-function Element.ellipse:fillColor(r, g, b, a)
-	self._fillColor = self._fillColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._fillColor[i] = r[i] end
-	else
-		self._fillColor[1] = r
-		self._fillColor[2] = g
-		self._fillColor[3] = b
-		self._fillColor[4] = a
-	end
-end
-
-function Element.ellipse:outlineColor(r, g, b, a)
-	self._outlineColor = self._outlineColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._outlineColor[i] = r[i] end
-	else
-		self._outlineColor[1] = r
-		self._outlineColor[2] = g
-		self._outlineColor[3] = b
-		self._outlineColor[4] = a
-	end
-end
-
-function Element.ellipse:outlineWidth(width)
-	self._outlineWidth = width
-end
-
-function Element.ellipse:segments(segments)
-	self._segments = segments
-end
-
-function Element.ellipse:stencil()
-	love.graphics.ellipse('fill', self._width/2, self._height/2,
-		self._width/2, self._height/2, self._segments or 64)
-end
-
-function Element.ellipse:drawSelf()
-	love.graphics.push 'all'
-	if self._fillColor and #self._fillColor > 1 then
-		love.graphics.setColor(self._fillColor)
-		love.graphics.ellipse('fill', self._width/2, self._height/2,
-			self._width/2, self._height/2, self._segments or 64)
-	end
-	if self._outlineColor and #self._outlineColor > 1 then
-		love.graphics.setColor(self._outlineColor)
-		love.graphics.setLineWidth(self._outlineWidth or 1)
-		love.graphics.ellipse('line', self._width/2, self._height/2,
-			self._width/2, self._height/2, self._segments or 64)
-	end
-	love.graphics.pop()
-end
-
-Element.image = newElementClass(Element.base)
-
-function Element.image:new(image, x, y)
-	self._image = image
-	self._x = x or 0
-	self._y = y or 0
-	self._width = image:getWidth()
-	self._height = image:getHeight()
-end
-
-function Element.image:scaleX(scaleX, anchorX)
-	self:width(self._image:getWidth() * scaleX, anchorX)
-end
-
-function Element.image:scaleY(scaleY, anchorY)
-	self:height(self._image:getHeight() * scaleY, anchorY)
-end
-
-function Element.image:scale(scaleX, scaleY, anchorX, anchorY)
-	self:scaleX(scaleX or 1, anchorX)
-	self:scaleY(scaleY or scaleX, anchorY)
-end
-
-function Element.image:color(r, g, b, a)
-	self._color = self._color or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._color[i] = r[i] end
-	else
-		self._color[1] = r
-		self._color[2] = g
-		self._color[3] = b
-		self._color[4] = a
-	end
-end
-
-function Element.image:drawSelf()
-	love.graphics.push 'all'
-	if self._color and #self._color > 0 then
-		love.graphics.setColor(self._color)
-	end
-	love.graphics.draw(self._image, 0, 0, 0,
-		self._width / self._image:getWidth(), self._height / self._image:getHeight())
-	love.graphics.pop()
-end
-
-Element.text = newElementClass(Element.base)
-
-function Element.text:new(font, text, x, y)
-	self._font = font
-	self._text = text
-	self._x = x or 0
-	self._y = y or 0
-	self._width = font:getWidth(text)
-	self._height = getTextHeight(font, text)
-end
-
-function Element.text:scaleX(scaleX, anchorX)
-	self:width(self._font:getWidth(self._text) * scaleX, anchorX)
-end
-
-function Element.text:scaleY(scaleY, anchorY)
-	self:height(getTextHeight(self._font, self._text) * scaleY, anchorY)
-end
-
-function Element.text:scale(scaleX, scaleY, anchorX, anchorY)
-	self:scaleX(scaleX or 1, anchorX)
-	self:scaleY(scaleY or scaleX, anchorY)
-end
-
-function Element.text:color(r, g, b, a)
-	self._color = self._color or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._color[i] = r[i] end
-	else
-		self._color[1] = r
-		self._color[2] = g
-		self._color[3] = b
-		self._color[4] = a
-	end
-end
-
-function Element.text:shadowColor(r, g, b, a)
-	self._shadowColor = self._shadowColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._shadowColor[i] = r[i] end
-	else
-		self._shadowColor[1] = r
-		self._shadowColor[2] = g
-		self._shadowColor[3] = b
-		self._shadowColor[4] = a
-	end
-end
-
-function Element.text:shadowOffsetX(offsetX)
-	self._shadowOffsetX = offsetX
-end
-
-function Element.text:shadowOffsetY(offsetY)
-	self._shadowOffsetY = offsetY
-end
-
-function Element.text:shadowOffset(offsetX, offsetY)
-	self:shadowOffsetX(offsetX)
-	self:shadowOffsetY(offsetY)
-end
-
-function Element.text:drawSelf()
-	love.graphics.push 'all'
-	love.graphics.setFont(self._font)
-	local sx = self._width / self._font:getWidth(self._text)
-	local sy = self._height / getTextHeight(self._font, self._text)
-	if self._shadowColor and #self._shadowColor > 0 then
-		local offsetX = self._shadowOffsetX or 1
-		local offsetY = self._shadowOffsetY or 1
-		love.graphics.setColor(self._shadowColor)
-		love.graphics.print(self._text, offsetX, offsetY, 0, sx, sy)
-	end
-	love.graphics.setColor(1, 1, 1)
-	if self._color and #self._color > 0 then
-		love.graphics.setColor(self._color)
-	end
-	love.graphics.print(self._text, 0, 0, 0, sx, sy)
-	love.graphics.pop()
-end
-
-Element.paragraph = newElementClass(Element.base)
-
-function Element.paragraph:new(font, text, limit, align, x, y)
-	self._font = font
-	self._text = text
-	self._limit = limit
-	self._align = align
-	self._x = x or 0
-	self._y = y or 0
-	self._width = limit
-	self._height = getParagraphHeight(font, text, limit)
-end
-
-function Element.paragraph:scaleX(scaleX, anchorX)
-	self:width(self._limit * scaleX, anchorX)
-end
-
-function Element.paragraph:scaleY(scaleY, anchorY)
-	self:height(getParagraphHeight(self._font, self._text, self._limit) * scaleY, anchorY)
-end
-
-function Element.paragraph:scale(scaleX, scaleY, anchorX, anchorY)
-	self:scaleX(scaleX or 1, anchorX)
-	self:scaleY(scaleY or scaleX, anchorY)
-end
-
-function Element.paragraph:color(r, g, b, a)
-	self._color = self._color or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._color[i] = r[i] end
-	else
-		self._color[1] = r
-		self._color[2] = g
-		self._color[3] = b
-		self._color[4] = a
-	end
-end
-
-function Element.paragraph:shadowColor(r, g, b, a)
-	self._shadowColor = self._shadowColor or {}
-	if type(r) == 'table' then
-		for i = 1, 4 do self._shadowColor[i] = r[i] end
-	else
-		self._shadowColor[1] = r
-		self._shadowColor[2] = g
-		self._shadowColor[3] = b
-		self._shadowColor[4] = a
-	end
-end
-
-function Element.paragraph:shadowOffsetX(offsetX)
-	self._shadowOffsetX = offsetX
-end
-
-function Element.paragraph:shadowOffsetY(offsetY)
-	self._shadowOffsetY = offsetY
-end
-
-function Element.paragraph:shadowOffset(offsetX, offsetY)
-	self:shadowOffsetX(offsetX)
-	self:shadowOffsetY(offsetY)
-end
-
-function Element.paragraph:drawSelf()
-	love.graphics.push 'all'
-	love.graphics.setFont(self._font)
-	local sx = self._width / self._limit
-	local sy = self._height / getParagraphHeight(self._font, self._text, self._limit)
-	if self._shadowColor and #self._shadowColor > 0 then
-		local offsetX = self._shadowOffsetX or 1
-		local offsetY = self._shadowOffsetY or 1
-		love.graphics.setColor(self._shadowColor)
-		love.graphics.printf(self._text, offsetX, offsetY, self._limit, self._align, 0, sx, sy)
-	end
-	love.graphics.setColor(1, 1, 1)
-	if self._color and #self._color > 0 then
-		love.graphics.setColor(self._color)
-	end
-	love.graphics.printf(self._text, 0, 0, self._limit, self._align, 0, sx, sy)
+	self:drawTop()
 	love.graphics.pop()
 end
 
 --[[
-	-- UI class --
+	Transform elements do two things:
+	- Apply an arbitrary transformation to a set of child elements
+	- Make a bounding box around the transformed child elements
 
-	The UI class is responsible for creating, storing, and drawing
-	elements. Important things to note:
-	- Element tables are reused whenever possible. This way,
-	we can keep "creating" new elements wihout actually
-	creating new tables and discarding old ones. This makes
-	the garbage collector happier.
-	- The core logic for arranging and drawing elements is in the
-	base element class (see above), not here.
+	When the scaling, shearing, or angle are changed or new children
+	are added, the transform element takes the following steps:
+	1. Get the rectangle around the children pre-transformation, including
+	any empty space above or to the left of the children
+	2. Get the corners of the rectangle
+	3. Transform each of those points
+	4. Make a new rectangle that contains the transformed points
+	5. Move and resize the transform element to match that rectangle
+	6. Set some variables to translate the children in the drawing phase
+	to compensate for the transform element's changed position (note
+	that this translation has to happen after the scaling/shearing/rotating,
+	otherwise the post-transform bounds of the children would change again.
+	This is also why we don't change the position of the children elements
+	using shiftChildren.)
 ]]
-local Ui = {}
 
-function Ui:__index(k)
-	if Ui[k] then return Ui[k] end
+--- Applies arbitrary transformations to child elements.
+--
+-- Extends the @{Element} class.
+-- @type Transform
+local Transform = newElementClass(Element)
+
+Transform.preserve._transform = true
+
+--- Initializes the element.
+-- @number x the horizontal position of the transform
+-- @number y the vertical position of the transform
+function Transform:new(x, y)
+	checkOptionalArgument(2, x, 'number')
+	checkOptionalArgument(3, y, 'number')
+	self._x = x
+	self._y = y
+	self._transform = self._transform or love.math.newTransform()
+	self._transform:reset()
+	self._childrenShiftX = 0
+	self._childrenShiftY = 0
+end
+
+function Transform:_getTransformedChildrenBounds()
+	if not (self._children and #self._children > 0) then return end
+	local childrenLeft, childrenTop, childrenRight, childrenBottom = self:get 'childrenBounds'
+	local x1, y1 = self._transform:transformPoint(childrenLeft, childrenTop)
+	local x2, y2 = self._transform:transformPoint(childrenRight, childrenTop)
+	local x3, y3 = self._transform:transformPoint(childrenRight, childrenBottom)
+	local x4, y4 = self._transform:transformPoint(childrenLeft, childrenBottom)
+	local left = math.min(x1, x2, x3, x4)
+	local top = math.min(y1, y2, y3, y4)
+	local right = math.max(x1, x2, x3, x4)
+	local bottom = math.max(y1, y2, y3, y4)
+	return left, top, right, bottom
+end
+
+function Transform:_updateDimensions()
+	if not (self._children and #self._children > 0) then return end
+	local left, top, right, bottom = self:_getTransformedChildrenBounds()
+	left = math.min(left, 0)
+	top = math.min(top, 0)
+	self:shift(left, top)
+	self._childrenShiftX = left
+	self._childrenShiftY = top
+	self:width(right - left)
+	self:height(bottom - top)
+end
+
+function Transform:_updateTransform()
+	self._transform:reset()
+	self._transform:rotate(self._angle or 0)
+	self._transform:scale(self._scaleX or 1, self._scaleY or 1)
+	self._transform:shear(self._shearX or 0, self._shearY or 0)
+	self:_updateDimensions()
+end
+
+--- Sets the angle of the transform.
+-- @number angle
+function Transform:angle(angle)
+	checkArgument(1, angle, 'number')
+	self._angle = angle
+	self:_updateTransform()
+end
+
+--- Sets the horizontal scaling factor of the transform.
+-- @number scale
+function Transform:scaleX(scale)
+	checkArgument(1, scale, 'number')
+	self._scaleX = scale
+	self:_updateTransform()
+end
+
+--- Sets the vertical scaling factor of the transform.
+-- @number scale
+function Transform:scaleY(scale)
+	checkArgument(1, scale, 'number')
+	self._scaleY = scale
+	self:_updateTransform()
+end
+
+--- Sets the horizontal and vertical scaling factor of the transform.
+-- @number scaleX
+-- @number[opt=scaleX] scaleY
+function Transform:scale(scaleX, scaleY)
+	checkArgument(1, scaleX, 'number')
+	checkOptionalArgument(2, scaleY, 'number')
+	self._scaleX = scaleX
+	self._scaleY = scaleY or scaleX
+	self:_updateTransform()
+end
+
+--- Sets the horizontal shearing factor of the transform.
+-- @number shear
+function Transform:shearX(shear)
+	checkArgument(1, shear, 'number')
+	self._shearX = shear
+	self:_updateTransform()
+end
+
+--- Sets the vertical shearing factor of the transform.
+-- @number shear
+function Transform:shearY(shear)
+	checkArgument(1, shear, 'number')
+	self._shearY = shear
+	self:_updateTransform()
+end
+
+--- Sets the horizontal and vertical shearing factor of the transform.
+-- @number shearX
+-- @number[opt=shearX] shearY
+function Transform:shear(shearX, shearY)
+	checkArgument(1, shearX, 'number')
+	checkOptionalArgument(2, shearY, 'number')
+	self._shearX = shearX
+	self._shearY = shearY or shearX
+	self:_updateTransform()
+end
+
+function Transform:onEndChildren(...)
+	self:_updateDimensions()
+end
+
+function Transform:draw(stencilValue)
+	if not self:hasChildren() then return end
+	love.graphics.push 'all'
+	love.graphics.translate(self:get 'x', self:get 'y')
+	love.graphics.translate(-self._childrenShiftX, -self._childrenShiftY)
+	love.graphics.applyTransform(self._transform)
+	for _, child in ipairs(self._children) do
+		child:draw(stencilValue)
+	end
+	love.graphics.pop()
+end
+
+--- A base class for elements that draw love.graphics
+-- primitives with a fill color and an outline color.
+-- This class isn't useful on its own; it's meant to be
+-- extended by custom classes.
+--
+-- Extends the @{Element} class.
+-- @type Shape
+local Shape = newElementClass(Element)
+
+--- Sets the fill color of the shape.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Shape:fillColor(r, g, b, a)
+	self:setColor('_fillColor', r, g, b, a)
+end
+
+--- Sets the outline color of the shape.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Shape:outlineColor(r, g, b, a)
+	self:setColor('_outlineColor', r, g, b, a)
+end
+
+--- Sets the width of the shape's outline.
+-- @number width
+function Shape:outlineWidth(width)
+	checkArgument(1, width, 'number')
+	self._outlineWidth = width
+end
+
+--- Draws the shape. Override this to define how the shape
+-- will be drawn.
+-- @string mode the drawing mode for the shape. Will be either
+-- "fill" or "line".
+function Shape:drawShape(mode) end
+
+function Shape:stencil() self:drawShape 'fill' end
+
+function Shape:drawBottom()
+	love.graphics.push 'all'
+	if self:isColorSet(self._fillColor) then
+		love.graphics.setColor(self._fillColor)
+		self:drawShape 'fill'
+	end
+	love.graphics.pop()
+end
+
+function Shape:drawTop()
+	love.graphics.push 'all'
+	if self:isColorSet(self._outlineColor) then
+		love.graphics.setColor(self._outlineColor)
+		if self._outlineWidth then
+			love.graphics.setLineWidth(self._outlineWidth)
+		end
+		self:drawShape 'line'
+	end
+	love.graphics.pop()
+end
+
+--- Draws a rectangle.
+--
+-- Extends the @{Shape} class.
+-- @type Rectangle
+local Rectangle = newElementClass(Shape)
+
+--- Sets the radius of the corners of the rectangle.
+-- @number radiusX the horizontal radius
+-- @number[opt=radiusX] radiusY the vertical radius
+function Rectangle:cornerRadius(radiusX, radiusY)
+	checkArgument(1, radiusX, 'number')
+	checkOptionalArgument(2, radiusY, 'number')
+	self._cornerRadiusX = radiusX
+	self._cornerRadiusY = radiusY or radiusX
+end
+
+--- Sets the number of segments used to draw the corners.
+-- @number segments
+function Rectangle:cornerSegments(segments)
+	checkArgument(1, segments, 'number')
+	self._cornerSegments = segments
+end
+
+function Rectangle:drawShape(mode)
+	love.graphics.rectangle(mode, 0, 0, self:get 'width', self:get 'height',
+		self._cornerRadiusX, self._cornerRadiusY, self._cornerSegments)
+end
+
+--- Draws an ellipse.
+--
+-- Extends the @{Shape} class.
+-- @type Ellipse
+local Ellipse = newElementClass(Shape)
+
+--- Sets the number of segments used to draw the ellipse.
+-- @number segments
+function Ellipse:segments(segments)
+	checkArgument(1, segments, 'number')
+	self._segments = segments
+end
+
+function Ellipse:drawShape(mode)
+	love.graphics.ellipse(mode,
+		self:get 'width' / 2, self:get 'height' / 2,
+		self:get 'width' / 2, self:get 'height' / 2,
+		self._segments)
+end
+
+--- Draws an image.
+--
+-- Extends the @{Element} class.
+-- @type Image
+local Image = newElementClass(Element)
+
+--- Initializes the image.
+-- @tparam Image image the image to use
+-- @number x the horizontal position of the image
+-- @number y the vertical position of the image
+function Image:new(image, x, y)
+	checkArgument(2, image, 'Image')
+	checkOptionalArgument(3, x, 'number')
+	checkOptionalArgument(4, y, 'number')
+	self._image = image
+	self._naturalWidth = image:getWidth()
+	self._naturalHeight = image:getHeight()
+	self._x = x
+	self._y = y
+	self._width = self._naturalWidth
+	self._height = self._naturalHeight
+end
+
+--- Sets the width of the image relative to its original width.
+-- @number scale
+function Image:scaleX(scale)
+	checkArgument(1, scale, 'number')
+	self:width(self._naturalWidth * scale)
+end
+
+--- Sets the height of the image relative to its original width.
+-- @number scale
+function Image:scaleY(scale)
+	checkArgument(1, scale, 'number')
+	self:height(self._naturalHeight * scale)
+end
+
+--- Sets the width and height of the image relative to its original dimensions.
+-- @number scaleX
+-- @number[opt=scaleX] scaleY
+function Image:scale(scaleX, scaleY)
+	checkArgument(1, scaleX, 'number')
+	checkOptionalArgument(2, scaleY, 'number')
+	self:scaleX(scaleX)
+	self:scaleY(scaleY or scaleX)
+end
+
+--- Sets the blend color of the image.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Image:color(r, g, b, a)
+	self:setColor('_color', r, g, b, a)
+end
+
+function Image:drawBottom()
+	love.graphics.push 'all'
+	if self:isColorSet(self._color) then
+		love.graphics.setColor(self._color)
+	end
+	love.graphics.draw(self._image, 0, 0, 0,
+		self:get 'width' / self._naturalWidth,
+		self:get 'height' / self._naturalHeight)
+	love.graphics.pop()
+end
+
+--- Draws text.
+--
+-- Extends the @{Element} class.
+-- @type Text
+local Text = newElementClass(Element)
+
+--- Initializes the text.
+-- @tparam Font font the font to use
+-- @string text the text to draw
+-- @number x the horizontal position of the text
+-- @number y the vertical position of the text
+function Text:new(font, text, x, y)
+	checkArgument(2, font, 'Font')
+	checkArgument(3, text, 'string')
+	checkOptionalArgument(4, x, 'number')
+	checkOptionalArgument(5, y, 'number')
+	self._font = font
+	self._text = text
+	self._naturalWidth = font:getWidth(text)
+	self._naturalHeight = getTextHeight(font, text)
+	self._x = x
+	self._y = y
+	self._width = self._naturalWidth
+	self._height = self._naturalHeight
+end
+
+--- Sets the width of the text relative to its original width.
+-- @number scale
+function Text:scaleX(scale)
+	checkArgument(1, scale, 'number')
+	self:width(self._naturalWidth * scale)
+end
+
+--- Sets the height of the text relative to its original width.
+-- @number scale
+function Text:scaleY(scale)
+	checkArgument(1, scale, 'number')
+	self:height(self._naturalHeight * scale)
+end
+
+--- Sets the width and height of the text relative to its original dimensions.
+-- @number scaleX
+-- @number[opt=scaleX] scaleY
+function Text:scale(scaleX, scaleY)
+	checkArgument(1, scaleX, 'number')
+	checkOptionalArgument(2, scaleY, 'number')
+	self:scaleX(scaleX)
+	self:scaleY(scaleY or scaleX)
+end
+
+--- Sets the color of the text.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Text:color(r, g, b, a)
+	self:setColor('_color', r, g, b, a)
+end
+
+--- Sets the color of the text's shadow.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Text:shadowColor(r, g, b, a)
+	self:setColor('_shadowColor', r, g, b, a)
+end
+
+--- Sets the horizontal offset of the text's shadow.
+-- @number offset
+function Text:shadowOffsetX(offset)
+	checkArgument(1, offset, 'number')
+	self._shadowOffsetX = offset
+end
+
+--- Sets the vertical offset of the text's shadow.
+-- @number offset
+function Text:shadowOffsetY(offset)
+	checkArgument(1, offset, 'number')
+	self._shadowOffsetY = offset
+end
+
+--- Sets the horizontal and vertical offset of the text's shadow.
+-- @number offsetX
+-- @number[opt=offsetX] offsetY
+function Text:shadowOffset(offsetX, offsetY)
+	checkArgument(1, offsetX, 'number')
+	checkOptionalArgument(2, offsetY, 'number')
+	self:shadowOffsetX(offsetX)
+	self:shadowOffsetY(offsetY or offsetX)
+end
+
+function Text:stencil()
+	love.graphics.push 'all'
+	love.graphics.setFont(self._font)
+	love.graphics.print(self._text, 0, 0, 0,
+		self:get 'width' / self._naturalWidth,
+		self:get 'height' / self._naturalHeight)
+	love.graphics.pop()
+end
+
+function Text:drawBottom()
+	love.graphics.push 'all'
+	love.graphics.setFont(self._font)
+	if self:isColorSet(self._shadowColor) then
+		love.graphics.setColor(self._shadowColor)
+		love.graphics.print(self._text, (self._shadowOffsetX or 1), (self._shadowOffsetY or 1), 0,
+			self:get 'width' / self._naturalWidth,
+			self:get 'height' / self._naturalHeight)
+	end
+	if self:isColorSet(self._color) then
+		love.graphics.setColor(self._color)
+	else
+		love.graphics.setColor(1, 1, 1)
+	end
+	love.graphics.print(self._text, 0, 0, 0,
+		self:get 'width' / self._naturalWidth,
+		self:get 'height' / self._naturalHeight)
+	love.graphics.pop()
+end
+
+--- Draws a paragraph of text. In contrast to the @{Text}
+-- element, this element automatically inserts line breaks
+-- to stay within a certain width. It also supports
+-- different align modes.
+--
+-- Extends the @{Element} class.
+-- @type Paragraph
+local Paragraph = newElementClass(Element)
+
+--- Initializes the paragraph.
+-- @tparam Font font the font to use
+-- @string text the text to draw
+-- @number limit the amount of horizontal space the text
+-- can span before a line break occurs
+-- @string align how to align the text. Can be "left", "center", "right", or "justify".
+-- @number x the horizontal position of the paragraph
+-- @number y the vertical position of the paragraph
+function Paragraph:new(font, text, limit, align, x, y)
+	checkArgument(2, font, 'Font')
+	checkArgument(3, text, 'string')
+	checkArgument(4, limit, 'number')
+	checkOptionalArgument(5, align, 'string')
+	checkOptionalArgument(6, x, 'number')
+	checkOptionalArgument(7, y, 'number')
+	self._font = font
+	self._text = text
+	self._limit = limit
+	self._align = align
+	self._naturalWidth = limit
+	self._naturalHeight = getParagraphHeight(font, text, limit)
+	self._x = x
+	self._y = y
+	self._width = self._naturalWidth
+	self._height = self._naturalHeight
+end
+
+--- Sets the width of the paragraph relative to its original width.
+-- @number scale
+function Paragraph:scaleX(scale)
+	checkArgument(1, scale, 'number')
+	self:width(self._naturalWidth * scale)
+end
+
+--- Sets the height of the paragraph relative to its original width.
+-- @number scale
+function Paragraph:scaleY(scale)
+	checkArgument(1, scale, 'number')
+	self:height(self._naturalHeight * scale)
+end
+
+--- Sets the width and height of the paragraph relative to its original dimensions.
+-- @number scaleX
+-- @number[opt=scaleX] scaleY
+function Paragraph:scale(scaleX, scaleY)
+	checkArgument(1, scaleX, 'number')
+	checkOptionalArgument(2, scaleY, 'number')
+	self:scaleX(scaleX)
+	self:scaleY(scaleY or scaleX)
+end
+
+--- Sets the color of the paragraph.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Paragraph:color(r, g, b, a)
+	self:setColor('_color', r, g, b, a)
+end
+
+--- Sets the color of the paragraph's shadow.
+-- @tparam table|number r the red component of the color, or a table containing all of the color components
+-- @number[opt] g the green component of the color
+-- @number[opt] b the blue component of the color
+-- @number[opt] a the alpha component of the color
+function Paragraph:shadowColor(r, g, b, a)
+	self:setColor('_shadowColor', r, g, b, a)
+end
+
+--- Sets the horizontal offset of the paragraph's shadow.
+-- @number offset
+function Paragraph:shadowOffsetX(offset)
+	checkArgument(1, offset, 'number')
+	self._shadowOffsetX = offset
+end
+
+--- Sets the vertical offset of the paragraph's shadow.
+-- @number offset
+function Paragraph:shadowOffsetY(offset)
+	checkArgument(1, offset, 'number')
+	self._shadowOffsetY = offset
+end
+
+--- Sets the horizontal and vertical offset of the paragraph's shadow.
+-- @number offsetX
+-- @number[opt=offsetX] offsetY
+function Paragraph:shadowOffset(offsetX, offsetY)
+	checkArgument(1, offsetX, 'number')
+	checkOptionalArgument(2, offsetY, 'number')
+	self:shadowOffsetX(offsetX)
+	self:shadowOffsetY(offsetY or offsetX)
+end
+
+function Paragraph:stencil()
+	love.graphics.push 'all'
+	love.graphics.setFont(self._font)
+	love.graphics.printf(self._text, 0, 0,
+		self._limit, self._align, 0,
+		self:get 'width' / self._naturalWidth,
+		self:get 'height' / self._naturalHeight)
+	love.graphics.pop()
+end
+
+function Paragraph:drawBottom()
+	love.graphics.push 'all'
+	love.graphics.setFont(self._font)
+	if self:isColorSet(self._shadowColor) then
+		love.graphics.setColor(self._shadowColor)
+		love.graphics.printf(self._text, (self._shadowOffsetX or 1), (self._shadowOffsetY or 1),
+			self._limit, self._align, 0,
+			self:get 'width' / self._naturalWidth,
+			self:get 'height' / self._naturalHeight)
+	end
+	if self:isColorSet(self._color) then
+		love.graphics.setColor(self._color)
+	else
+		love.graphics.setColor(1, 1, 1)
+	end
+	love.graphics.printf(self._text, 0, 0,
+		self._limit, self._align, 0,
+		self:get 'width' / self._naturalWidth,
+		self:get 'height' / self._naturalHeight)
+	love.graphics.pop()
+end
+
+local elementClasses = {
+	element = Element,
+	transform = Transform,
+	shape = Shape,
+	rectangle = Rectangle,
+	ellipse = Ellipse,
+	image = Image,
+	text = Text,
+	paragraph = Paragraph,
+}
+
+local function validateElementClass(class)
+	checkArgument(1, class, 'string', 'table')
+	if type(class) == 'string' then
+		checkCondition(elementClasses[class], string.format("no built-in element class called '%s'", class))
+	end
+end
+
+--- Creates, manages, and draws elements.
+-- @type Layout
+local Layout = {}
+
+function Layout:__index(k)
+	if Layout[k] then return Layout[k] end
 	self._functionCache[k] = self._functionCache[k] or function(_, ...)
-		local element = self:_getSelectedElement()
+		local element = self:getElement '@current'
+		checkCondition(element, string.format("no element to call function '%s' on", k))
+		checkCondition(element[k], string.format("currently selected element has no function '%s'", k))
 		element[k](element, ...)
 		return self
 	end
 	return self._functionCache[k]
 end
 
---[[
-	Gets the class table for the current element. If the
-	element type is a string, the code will look for the
-	built-in class with that name. If the class is a user-provided
-	table, it'll use that directly.
-]]
-function Ui:_getElementClass(className)
-	if type(className) == 'table' then return className end
-	return Element[className]
-end
-
-function Ui:_getSelectedElement()
-	return self._groups[self._currentGroup]._selectedElement
-end
-
-function Ui:_getPreviousElement()
-	return self._groups[self._currentGroup]._previousElement
-end
-
-function Ui:_getParentElement()
-	return self._groups[self._currentGroup]._parent
-end
-
--- Resets the UI state after a draw has been completed.
--- Not called until a new element has been created.
-function Ui:start()
-	for i = #self._elements, 1, -1 do
-		self._elements[i] = nil
-	end
-	for _, element in ipairs(self._elementPool) do
-		element._used = false
-	end
-	self._selectedElement = nil
-	self._previousElement = nil
-	return self
-end
-
---[[
-	Clears out an element so it can be reused. Tables
-	will be cleared out one level deep, but they'll
-	be left in the element table so they can be reused.
-]]
-function Ui:_clearElement(element)
+function Layout:_clearElement(element)
 	for key, value in pairs(element) do
 		if not element.preserve[key] then
 			if type(value) == 'table' then
-				for nestedKey in pairs(value) do
-					value[nestedKey] = nil
-				end
+				for k in pairs(value) do value[k] = nil end
 			else
 				element[key] = nil
 			end
@@ -800,140 +1252,186 @@ function Ui:_clearElement(element)
 	end
 end
 
-function Ui:select(element)
-	local group = self._groups[self._currentGroup]
-	group._previousElement = group._selectedElement
-	group._selectedElement = element
+function Layout:_validateElement(name)
+	checkArgument(1, name, 'string', 'table')
+	local element = self:getElement(name)
+	local message = name == '@current' and 'No element is currently selected. Have you created any elements yet?'
+		or name == '@previous' and 'no previous element to get'
+		or name == '@parent' and 'No parent element to get. This keyword should be used '
+			.. 'within layout:beginChildren() and layout:endChildren() calls.'
+		or string.format("no element named '%s'", name)
+	checkCondition(element, message)
+end
+
+--- Gets an element table.
+-- @string name the name of the element to get
+function Layout:getElement(name)
+	checkOptionalArgument(1, name, 'string', 'table')
+	name = name or '@current'
+	if type(name) == 'table' then return name end
+	if name == '@current' then
+		return self._groups[self._currentGroupIndex].current
+	elseif name == '@previous' then
+		return self._groups[self._currentGroupIndex].previous
+	elseif name == '@parent' then
+		return self._groups[self._currentGroupIndex].parent
+	end
+	return self._named[name]
+end
+
+--[[
+	A note to self about layout.get:
+
+	It might be tempting to use a more compact syntax for
+	layout.get, like
+
+		layout.get 'elementName.propertyName'
+
+	But this doesn't work when you need to get an element by its
+	table and not its name! So don't make this mistake again!
+	It's not a good API choice!
+]]
+
+--- Gets the value of an element's property.
+-- @tparam string|table elementName the name of the element to get the property from, or the element table itself
+-- @string propertyName the name of the property to get
+-- @param ... additional arguments to pass to the element's property getter
+-- @return the property value
+function Layout:get(elementName, propertyName, ...)
+	self:_validateElement(elementName)
+	checkArgument(2, propertyName, 'string')
+	local element = self:getElement(elementName)
+	checkCondition(element.get[propertyName], string.format("element has no property named '%s'", propertyName))
+	return element.get[propertyName](element, ...)
+end
+
+--- Selects an element for future operations to affect.
+-- @tparam string|table name the name of the element to select, or the element table itself
+function Layout:select(name)
+	self:_validateElement(name)
+	local element = self:getElement(name)
+	local group = self._groups[self._currentGroupIndex]
+	group.previous = group.current
+	group.current = element
 	return self
 end
 
-function Ui:new(className, ...)
-	if self._finished then
-		self:start()
-		self._finished = false
+--- Adds an existing element to the element tree.
+-- @tparam Element element
+function Layout:add(element)
+	checkArgument(1, element, 'table')
+	-- add it to the tree and select it
+	local group = self._groups[self._currentGroupIndex]
+	if group.parent then
+		group.parent:onAddChild(element)
+	else
+		table.insert(self._elements, element)
+	end
+	self:select(element)
+	return self
+end
+
+--- Creates a new element and adds it to the element tree.
+-- @tparam string|table elementClass the type of element to create
+-- @param ... additional arguments to pass to the new element's constructor
+function Layout:new(elementClass, ...)
+	validateElementClass(elementClass)
+	-- get the appropriate element class
+	if type(elementClass) == 'string' then
+		elementClass = elementClasses[elementClass]
 	end
 	local element
-	-- if possible, reuse an unused element
+	-- try to reuse an unused element
 	for _, e in ipairs(self._elementPool) do
 		if not e._used then
 			self:_clearElement(e)
 			element = e
-			break
 		end
 	end
-	-- otherwise, create a new one and add it to the pool
+	-- if there are none, create a new one and add it to the pool
 	if not element then
 		element = {}
 		table.insert(self._elementPool, element)
 	end
 	-- initialize the element
-	element.ui = self
 	element._used = true
-	setmetatable(element, self:_getElementClass(className))
-	if element.new then element:new(...) end
-	-- select the element
-	self:select(element)
-	-- add it to the elements tree
-	local parent = self:_getParentElement()
-	if parent then
-		if parent.onAddChild then parent:onAddChild(element) end
-	else
-		table.insert(self._elements, element)
-	end
+	setmetatable(element, elementClass)
+	element:new(...)
+	-- add it to the tree and select it
+	self:add(element)
 	return self
 end
 
---[[
-	Gets an element by name or special keyword. If the element itself
-	is passed to this function, it'll just return the element.
-	This is done so that the other functions that use getElement
-	can work with names or the element itself without having to
-	write that check for each function.
-]]
-function Ui:getElement(name)
-	if type(name) == 'table' then return name end
-	name = name or '@current'
-	if name == '@current' then
-		return self:_getSelectedElement()
-	elseif name == '@previous' then
-		return self:_getPreviousElement()
-	elseif name == '@parent' then
-		return self:_getParentElement()
-	end
-	for i = #self._elementPool, 1, -1 do
-		local element = self._elementPool[i]
-		if element._used and element._name == name then
-			return element
-		end
-	end
-end
-
-function Ui:get(elementName, propertyName, ...)
-	local element = self:getElement(elementName)
-	return element.get[propertyName](element, ...)
-end
-
-function Ui:getState(name)
-	local element = self:getElement(name)
-	if not element then return end
-	if not element._name then return end
-	self._state[element._name] = self._state[element._name] or {}
-	return self._state[element._name]
-end
-
-function Ui:beginChildren()
-	local parent = self:_getSelectedElement()
-	self._currentGroup = self._currentGroup + 1
-	self._groups[self._currentGroup] = self._groups[self._currentGroup] or {}
-	local group = self._groups[self._currentGroup]
-	group._parent = parent
-	group._selectedElement = nil
-	group._previousElement = nil
+--- Names the currently selected element.
+-- @string name
+function Layout:name(name)
+	checkArgument(1, name, 'string')
+	self._named[name] = self:getElement '@current'
 	return self
 end
 
-function Ui:endChildren()
-	self._currentGroup = self._currentGroup - 1
+--- Starts adding children to the currently selected element.
+-- @param ... additional arguments to pass to the parent element's onBeginChildren callback
+function Layout:beginChildren(...)
+	local element = self:getElement '@current'
+	element:onBeginChildren(...)
+	self._currentGroupIndex = self._currentGroupIndex + 1
+	self._groups[self._currentGroupIndex] = self._groups[self._currentGroupIndex] or {}
+	local group = self._groups[self._currentGroupIndex]
+	for k in pairs(group) do group[k] = nil end
+	group.parent = element
 	return self
 end
 
-function Ui:draw()
-	-- update mouse state
-	self._mouseXPrevious, self._mouseYPrevious = self._mouseX, self._mouseY
-	self._mouseX, self._mouseY = love.mouse.getPosition()
-	for i = 1, numberOfMouseButtons do
-		self._mouseDownPrevious[i] = self._mouseDown[i]
-		self._mouseDown[i] = love.mouse.isDown(i)
-	end
-	-- draw elements
-	for _, element in ipairs(self._elements) do
-		if element.draw then element:draw() end
-	end
-	self._finished = true
+--- Finishes adding children to the current parent element.
+-- @param ... additional arguments to pass to the parent element's onEndChildren callback
+function Layout:endChildren(...)
+	local group = self._groups[self._currentGroupIndex]
+	group.parent:onEndChildren(...)
+	self._currentGroupIndex = self._currentGroupIndex - 1
 	return self
 end
 
+--- Draws and clears out the element tree.
+function Layout:draw()
+	-- draw each element and remove it from the tree
+	for elementIndex, element in ipairs(self._elements) do
+		element:draw()
+		self._elements[elementIndex] = nil
+	end
+	-- mark all elements as unused
+	for _, element in ipairs(self._elementPool) do
+		element._used = false
+	end
+	-- clear named elements
+	for name in pairs(self._named) do self._named[name] = nil end
+	return self
+end
+
+--- @section end
+
+--- Creates a new layout.
+-- @treturn Layout
 function charm.new()
 	return setmetatable({
-		_finished = false,
-		_elements = {},
 		_elementPool = {},
+		_elements = {},
 		_groups = {{}},
-		_currentGroup = 1,
-		_state = {},
+		_currentGroupIndex = 1,
+		_named = {},
 		_functionCache = {},
-		_mouseDown = {},
-		_mouseDownPrevious = {},
-		_mouseX = nil,
-		_mouseY = nil,
-		_mouseXPrevious = nil,
-		_mouseYPrevious = nil,
-	}, Ui)
+	}, Layout)
 end
 
+--- Creates a new element class.
+-- @tparam[opt='base'] table|string parent the element class to extend from.
+-- This can be the element class table itself, or the name of a built-in
+-- element class.
+-- @treturn table
 function charm.extend(parent)
-	if type(parent) == 'string' then parent = Element[parent] end
-	parent = parent or Element.base
+	if parent then validateElementClass(parent) end
+	if type(parent) == 'string' then parent = elementClasses[parent] end
+	parent = parent or elementClasses.element
 	return newElementClass(parent)
 end
 

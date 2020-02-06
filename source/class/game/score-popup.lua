@@ -40,9 +40,9 @@ function ScorePopup:draw()
 	local squaresText = self.squares == 1 and '1 square'
 		or string.format('%i squares', self.squares)
 	local text = squaresText .. '\n+' .. self.score
-	self.pool.data.ui
+	self.pool.data.layout
 		:new('paragraph', font.scorePopup, text, 100000, 'center')
-			:center(self.x):middle(self.y)
+			:centerX(self.x):centerY(self.y)
 			:color(self.blinkPhase < .5 and color.orange or color.white)
 			:shadowColor(color.maroon)
 			:shadowOffset(4, 4)

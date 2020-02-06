@@ -38,7 +38,6 @@ function Board:initTiles()
 end
 
 function Board:new(pool)
-	self.ui = charm.new()
 	self.pool = pool
 	self:initTiles()
 	self:initTransform()
@@ -274,21 +273,20 @@ function Board:drawSquareHighlights()
 end
 
 function Board:drawHud()
-	self.ui:start()
 	if self.totalSquares > 0 then
 		local text = self.totalSquares == 1 and '1 square' or self.totalSquares .. ' squares'
-		local scale = 1 / self.scale * self.hudSquaresTextScale
-		self.ui:new('text', font.hud, text)
-			:center(self.size/2)
-			:top(self.size + 1/4)
-			:scale(scale)
+		local centerX, top = self.transform:transformPoint(self.size/2, self.size + 1/4)
+		self.pool.data.layout
+			:new('text', font.hud, text)
+				:centerX(centerX)
+				:top(top)
+				:scale(self.hudSquaresTextScale)
 	end
-	self.ui
+	local centerX, bottom = self.transform:transformPoint(self.size/2, -1/4)
+	self.pool.data.layout
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
-		:center(self.size/2)
-		:bottom(-1/4)
-		:scale(1 / self.scale)
-		:draw()
+			:centerX(centerX)
+			:bottom(bottom)
 end
 
 function Board:draw()
