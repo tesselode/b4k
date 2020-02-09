@@ -50,6 +50,7 @@ function Board:new(pool)
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
+	self.chain = 1
 	self.score = 0
 	self:detectSquares()
 	self.stencil = util.bind(self.stencil, self)
@@ -118,6 +119,14 @@ function Board:squareAt(x, y)
 	return topLeft.color == topRight.color
 		and topRight.color == bottomRight.color
 		and bottomRight.color == bottomLeft.color
+end
+
+function Board:updateChain()
+	if self.totalSquares > 0 then
+		self.chain = self.chain + 1
+	else
+		self.chain = 1
+	end
 end
 
 -- checks for new matching-color squares
@@ -251,6 +260,7 @@ function Board:removeTiles()
 		end
 	end
 	table.insert(self.queue, self.detectSquares)
+	table.insert(self.queue, self.updateChain)
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
@@ -351,8 +361,17 @@ function Board:drawSquaresCounter()
 			:left(left):top(top)
 end
 
+function Board:drawChainCounter()
+	local right, top = self.transform:transformPoint(self.width, self.height + 1/4)
+	self.pool.data.layout
+		:new('text', font.hud, self.chain)
+			:right(right)
+			:top(top)
+end
+
 function Board:drawHud()
 	self:drawSquaresCounter()
+	self:drawChainCounter()
 	local centerX, bottom = self.transform:transformPoint(self.width/2, -1/4)
 	self.pool.data.layout
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
