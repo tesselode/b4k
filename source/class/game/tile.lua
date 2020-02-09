@@ -13,7 +13,7 @@ Tile.spawnAnimationDuration = 1/2
 Tile.spawnAnimationStaggerAmount = .05
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = 1/2
-Tile.gravity = 20
+Tile.gravity = 50
 
 function Tile:new(pool, x, y)
 	self.pool = pool
