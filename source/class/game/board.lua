@@ -28,16 +28,15 @@ function Board:initTransform()
 	self.transform:translate(-self.width / 2, -self.height / 2)
 end
 
-function Board:spawnTile(x, y, options)
-	table.insert(self.tiles, self.pool:queue(Tile(self.pool, x, y, options)))
+function Board:spawnTile(x, y)
+	table.insert(self.tiles, self.pool:queue(Tile(self.pool, x, y)))
 end
 
 function Board:initTiles()
-	local tileOptions = {skipSpawnAnimation = true}
 	self.tiles = {}
 	for x = 0, self.width - 1 do
 		for y = 0, self.height - 1 do
-			self:spawnTile(x, y, tileOptions)
+			self:spawnTile(x, y)
 		end
 	end
 end
@@ -89,9 +88,9 @@ function Board:update(dt)
 end
 
 function Board:getTileAt(x, y)
-	for _, tile in ipairs(self.tiles) do
+	for tileIndex, tile in ipairs(self.tiles) do
 		if tile.x == x and tile.y == y then
-			return tile
+			return tile, tileIndex
 		end
 	end
 end
@@ -214,37 +213,36 @@ function Board:clearTiles()
 end
 
 -- actually removes tiles from the board once they've
--- finished their clear animation
+-- finished their clear animation and spawns new ones
 function Board:removeTiles()
-	local removedTiles = {}
-	--[[
-		minX and minY are the minimum tile x and y values
-		out of all the tiles removed in this sweep. These
-		values are used to make the tile spawning animation
-		a little tighter - see the Tile class for the juicy
-		details.
-	]]
-	local minX, minY
+	-- remove cleared tiles
 	for i = #self.tiles, 1, -1 do
 		local tile = self.tiles[i]
 		if tile.cleared then
 			table.remove(self.tiles, i)
-			local index = util.coordinatesToIndex(self.width, tile.x, tile.y)
-			table.insert(removedTiles, index)
-			minX = minX and math.min(minX, tile.x) or tile.x
-			minY = minY and math.min(minY, tile.y) or tile.y
 		end
 	end
-	-- spawn new tiles to fill the holes
-	local tileOptions = {
-		spawnAnimationMinX = minX,
-		spawnAnimationMinY = minY,
-	}
-	for _, index in ipairs(removedTiles) do
-		local x, y = util.indexToCoordinates(self.width, index)
-		self:spawnTile(x, y, tileOptions)
+	-- tell tiles above holes to fall and spawn new tiles
+	for x = 0, self.width - 1 do
+		-- spawn new tiles
+		local holesInColumn = 0
+		for y = self.height - 1, 0, -1 do
+			if not self:getTileAt(x, y) then
+				holesInColumn = holesInColumn + 1
+				self:spawnTile(x, -holesInColumn)
+			end
+		end
+		-- make tiles fall
+		for y = self.height - 1, 0, -1 do
+			if not self:getTileAt(x, y) then
+				for yy = -self.height, y - 1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then tile:fall() end
+				end
+			end
+		end
 	end
-	self:detectSquares()
+	table.insert(self.queue, self.detectSquares)
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)

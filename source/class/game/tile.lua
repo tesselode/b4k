@@ -13,43 +13,15 @@ Tile.spawnAnimationDuration = 1/2
 Tile.spawnAnimationStaggerAmount = .05
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = 1/2
+Tile.gravity = 20
 
---[[
-	The spawn animation is delayed based on the x and y position
-	of the tile. This way, new tiles spawn in with a diagonal
-	sweeping motion across the board. However, if there are
-	only new tiles spawning towards the bottom-right corner
-	of the board, for example, there will be a noticeable delay
-	before any tiles spawn in at all, which looks awkward. The
-	minX and minY values are used to offset this delay - these
-	are the minimum x and minimum y values out of all the tiles
-	that are spawning at the same time. The animation is
-	delayed with respect to these values, not the top-left
-	corner of the board.
-]]
-function Tile:playSpawnAnimation(minX, minY)
-	self.scale = 0
-	local relativeX = self.x - minX
-	local relativeY = self.y - minY
-	self.pool.data.tweens:to(self, self.spawnAnimationDuration, {scale = 1})
-		:ease 'backout'
-		:delay((relativeX + relativeY) * self.spawnAnimationStaggerAmount)
-end
-
-function Tile:new(pool, x, y, options)
-	options = options or {}
-	options.spawnAnimationMinX = options.spawnAnimationMinX or 0
-	options.spawnAnimationMinY = options.spawnAnimationMinY or 0
+function Tile:new(pool, x, y)
 	self.pool = pool
 	self.x = x
 	self.y = y
 	self.color = love.math.random(1, #self.colors)
 	self.cleared = false
-	if options.skipSpawnAnimation then
-		self.scale = 1
-	else
-		self:playSpawnAnimation(options.spawnAnimationMinX, options.spawnAnimationMinY)
-	end
+	self.scale = 1
 	self.rotationAnimation = {
 		playing = false,
 		centerX = nil,
@@ -58,12 +30,19 @@ function Tile:new(pool, x, y, options)
 		tween = nil,
 		flip = nil,
 	}
+	self.fallAnimation = {
+		playing = false,
+		y = nil,
+		targetY = nil,
+		velocity = nil,
+	}
 	self.playingClearAnimation = false
 end
 
 function Tile:isFree(toRotate)
 	if self.rotationAnimation.playing and not toRotate then return false end
 	if self.playingClearAnimation then return false end
+	if self.fallAnimation.playing then return false end
 	return true
 end
 
@@ -123,6 +102,35 @@ function Tile:rotate(corner, counterClockwise)
 	self.y = self.y + deltaY
 end
 
+--[[
+	Tells the tile to fall one unit downward and starts
+	the falling animation if it isn't already playing.
+]]
+function Tile:fall()
+	if self.fallAnimation.playing then
+		self.fallAnimation.targetY = self.fallAnimation.targetY + 1
+	else
+		self.fallAnimation.playing = true
+		self.fallAnimation.y = self.y
+		self.fallAnimation.targetY = self.y + 1
+		self.fallAnimation.velocity = 0
+	end
+end
+
+function Tile:update(dt)
+	if self.fallAnimation.playing then
+		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
+		self.fallAnimation.y = self.fallAnimation.y + self.fallAnimation.velocity * dt
+		if self.fallAnimation.y >= self.fallAnimation.targetY then
+			self.y = self.fallAnimation.targetY
+			self.fallAnimation.playing = false
+			self.fallAnimation.y = nil
+			self.fallAnimation.targetY = nil
+			self.fallAnimation.velocity = nil
+		end
+	end
+end
+
 function Tile:clear()
 	self.cleared = true
 	self.playingClearAnimation = true
@@ -136,6 +144,8 @@ function Tile:getDisplayPosition()
 		local x = self.rotationAnimation.centerX + math.sqrt(2)/2 * math.cos(self.rotationAnimation.angle)
 		local y = self.rotationAnimation.centerY + math.sqrt(2)/2 * math.sin(self.rotationAnimation.angle)
 		return x - .5, y - .5
+	elseif self.fallAnimation.playing then
+		return self.x, self.fallAnimation.y
 	end
 	return self.x, self.y
 end
