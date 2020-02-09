@@ -117,7 +117,7 @@ function Tile:fall()
 	end
 end
 
-function Tile:update(dt)
+function Tile:_update(dt)
 	if self.fallAnimation.playing then
 		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
 		self.fallAnimation.y = self.fallAnimation.y + self.fallAnimation.velocity * dt

@@ -82,8 +82,15 @@ function Board:updateRollingScore(dt)
 	end
 end
 
+function Board:updateTiles(dt)
+	for _, tile in ipairs(self.tiles) do
+		tile:_update(dt)
+	end
+end
+
 function Board:update(dt)
 	self:flushQueue()
+	self:updateTiles(dt)
 	self:updateRollingScore(dt)
 end
 
