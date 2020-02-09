@@ -6,7 +6,7 @@ function layout:init()
 	self.pool.data.layout = charm.new()
 end
 
-function layout:afterDraw()
+function layout:drawTop()
 	self.pool.data.layout:draw()
 end
 

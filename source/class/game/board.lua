@@ -29,7 +29,7 @@ function Board:initTransform()
 end
 
 function Board:spawnTile(x, y)
-	table.insert(self.tiles, self.pool:queue(Tile(self.pool, x, y)))
+	table.insert(self.tiles, Tile(self.pool, x, y))
 end
 
 function Board:initTiles()
