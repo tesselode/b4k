@@ -28,4 +28,9 @@ function util.clear(t)
 	for k in pairs(t) do t[k] = nil end
 end
 
+-- functions
+function util.bind(f, argument)
+	return function(...) f(argument, ...) end
+end
+
 return util

@@ -52,6 +52,7 @@ function Board:new(pool)
 	self.cursorX, self.cursorY = 0, 0
 	self.score = 0
 	self:detectSquares()
+	self.stencil = util.bind(self.stencil, self)
 
 	-- cosmetic
 	self.hudSquaresTextScale = 1
@@ -278,10 +279,18 @@ function Board:playSquaresTextPulseAnimation()
 	self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
 end
 
+function Board:stencil()
+	love.graphics.rectangle('fill', 0, 0, self.width, self.height)
+end
+
 function Board:drawTiles()
+	love.graphics.push 'all'
+	love.graphics.stencil(self.stencil)
+	love.graphics.setStencilTest('greater', 0)
 	for _, tile in ipairs(self.tiles) do
 		tile:_draw()
 	end
+	love.graphics.pop()
 end
 
 function Board:drawCursor()
