@@ -206,6 +206,7 @@ function Board:clearTiles()
 	for i = 1, self.totalSquares do
 		scoreIncrement = scoreIncrement + i
 	end
+	scoreIncrement = scoreIncrement * self.chain
 	self.score = self.score + scoreIncrement
 
 	-- spawn the score popup
@@ -218,7 +219,8 @@ function Board:clearTiles()
 		scorePopupX,
 		scorePopupY,
 		self.totalSquares,
-		scoreIncrement
+		scoreIncrement,
+		self.chain
 	))
 
 	util.clear(self.squares)

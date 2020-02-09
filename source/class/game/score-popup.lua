@@ -7,12 +7,13 @@ local ScorePopup = Object:extend()
 ScorePopup.floatSpeed = 100
 ScorePopup.blinkSpeed = 3
 
-function ScorePopup:new(pool, x, y, squares, score)
+function ScorePopup:new(pool, x, y, squares, score, chain)
 	self.pool = pool
 	self.x = x
 	self.y = y
 	self.squares = squares
 	self.score = score
+	self.chain = chain
 	self.blinkPhase = 0
 	self.scale = 0
 	self.pool.data.tweens:to(self, .5, {scale = 1})
@@ -32,9 +33,12 @@ function ScorePopup:update(dt)
 end
 
 function ScorePopup:draw()
-	local squaresText = self.squares == 1 and '1 square'
+	local text = self.squares == 1 and '1 square'
 		or string.format('%i squares', self.squares)
-	local text = squaresText .. '\n+' .. self.score
+	if self.chain > 1 then
+		text = text .. '\nchain x' .. self.chain
+	end
+	text = text .. '\n+' .. self.score
 	self.pool.data.layout
 		:new('paragraph', font.scorePopup, text, 100000, 'center')
 			:centerX(self.x):centerY(self.y)
