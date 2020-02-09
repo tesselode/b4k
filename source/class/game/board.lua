@@ -328,6 +328,18 @@ function Board:drawSquaresCounter()
 							:outlineColor(1, 1, 1)
 							:outlineWidth(8)
 							:beginChildren()
+								:new('line',
+									0, layout:get('@parent', 'height') / 2,
+									layout:get('@parent', 'width'), layout:get('@parent', 'height') / 2
+								)
+									:color(.25, .25, .25)
+									:lineWidth(8)
+								:new('line',
+									layout:get('@parent', 'width') / 2, 0,
+									layout:get('@parent', 'width') / 2, layout:get('@parent', 'height')
+								)
+									:color(.25, .25, .25)
+									:lineWidth(8)
 								:new('text', font.hud, self.totalSquares)
 									:centerX(layout:get('@parent', 'width') * .55)
 									:centerY(layout:get('@parent', 'height') * .45)
