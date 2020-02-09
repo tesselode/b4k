@@ -331,6 +331,16 @@ function Element.get:childrenBounds()
 	return left, top, right, bottom
 end
 
+--- Sets the origin of the element.
+-- @number originX the new horizontal origin of the element
+-- @number originY[opt=originX] the new vertical origin of the element
+function Element:origin(originX, originY)
+	checkArgument(1, originX, 'number')
+	checkOptionalArgument(2, originY, 'number')
+	self._originX = originX
+	self._originY = originY or originX
+end
+
 --- Sets the x position of the element.
 -- @number x the new x position of the element
 -- @number[opt=0] origin the origin to set the position with respect to. 0 = left, .5 = center, 1 = right
@@ -618,27 +628,6 @@ function Element:draw(stencilValue)
 	love.graphics.pop()
 end
 
---[[
-	Transform elements do two things:
-	- Apply an arbitrary transformation to a set of child elements
-	- Make a bounding box around the transformed child elements
-
-	When the scaling, shearing, or angle are changed or new children
-	are added, the transform element takes the following steps:
-	1. Get the rectangle around the children pre-transformation, including
-	any empty space above or to the left of the children
-	2. Get the corners of the rectangle
-	3. Transform each of those points
-	4. Make a new rectangle that contains the transformed points
-	5. Move and resize the transform element to match that rectangle
-	6. Set some variables to translate the children in the drawing phase
-	to compensate for the transform element's changed position (note
-	that this translation has to happen after the scaling/shearing/rotating,
-	otherwise the post-transform bounds of the children would change again.
-	This is also why we don't change the position of the children elements
-	using shiftChildren.)
-]]
-
 --- Applies arbitrary transformations to child elements.
 --
 -- Extends the @{Element} class.
@@ -648,22 +637,25 @@ local Transform = newElementClass(Element)
 Transform.preserve._transform = true
 
 --- Initializes the element.
--- @number x the horizontal position of the transform
--- @number y the vertical position of the transform
-function Transform:new(x, y)
-	checkOptionalArgument(2, x, 'number')
-	checkOptionalArgument(3, y, 'number')
-	self._x = x
-	self._y = y
+function Transform:new()
 	self._transform = self._transform or love.math.newTransform()
 	self._transform:reset()
-	self._childrenShiftX = 0
-	self._childrenShiftY = 0
 end
 
-function Transform:_getTransformedChildrenBounds()
+function Transform:_update()
 	if not (self._children and #self._children > 0) then return end
 	local childrenLeft, childrenTop, childrenRight, childrenBottom = self:get 'childrenBounds'
+	local childrenWidth = childrenRight - childrenLeft
+	local childrenHeight = childrenBottom - childrenTop
+	local offsetX = childrenWidth * (self._originX or 0)
+	local offsetY = childrenHeight * (self._originY or 0)
+	self._transform:setTransformation(
+		offsetX, offsetY,
+		self._angle or 0,
+		self._scaleX or 1, self._scaleY or 1,
+		offsetX, offsetY,
+		self._shearX or 0, self._shearY or 0
+	)
 	local x1, y1 = self._transform:transformPoint(childrenLeft, childrenTop)
 	local x2, y2 = self._transform:transformPoint(childrenRight, childrenTop)
 	local x3, y3 = self._transform:transformPoint(childrenRight, childrenBottom)
@@ -672,27 +664,18 @@ function Transform:_getTransformedChildrenBounds()
 	local top = math.min(y1, y2, y3, y4)
 	local right = math.max(x1, x2, x3, x4)
 	local bottom = math.max(y1, y2, y3, y4)
-	return left, top, right, bottom
+	self._x = left
+	self._y = top
+	self._width = right - left
+	self._height = bottom - top
 end
 
-function Transform:_updateDimensions()
-	if not (self._children and #self._children > 0) then return end
-	local left, top, right, bottom = self:_getTransformedChildrenBounds()
-	left = math.min(left, 0)
-	top = math.min(top, 0)
-	self:shift(left, top)
-	self._childrenShiftX = left
-	self._childrenShiftY = top
-	self:width(right - left)
-	self:height(bottom - top)
-end
-
-function Transform:_updateTransform()
-	self._transform:reset()
-	self._transform:rotate(self._angle or 0)
-	self._transform:scale(self._scaleX or 1, self._scaleY or 1)
-	self._transform:shear(self._shearX or 0, self._shearY or 0)
-	self:_updateDimensions()
+--- Sets the origin of the transformation.
+-- @number originX the new horizontal origin of the element
+-- @number originY[opt=originX] the new vertical origin of the element
+function Transform:origin(originX, originY)
+	self.parent.origin(self, originX, originY)
+	self:_update()
 end
 
 --- Sets the angle of the transform.
@@ -700,7 +683,7 @@ end
 function Transform:angle(angle)
 	checkArgument(1, angle, 'number')
 	self._angle = angle
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the horizontal scaling factor of the transform.
@@ -708,7 +691,7 @@ end
 function Transform:scaleX(scale)
 	checkArgument(1, scale, 'number')
 	self._scaleX = scale
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the vertical scaling factor of the transform.
@@ -716,7 +699,7 @@ end
 function Transform:scaleY(scale)
 	checkArgument(1, scale, 'number')
 	self._scaleY = scale
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the horizontal and vertical scaling factor of the transform.
@@ -727,7 +710,7 @@ function Transform:scale(scaleX, scaleY)
 	checkOptionalArgument(2, scaleY, 'number')
 	self._scaleX = scaleX
 	self._scaleY = scaleY or scaleX
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the horizontal shearing factor of the transform.
@@ -735,7 +718,7 @@ end
 function Transform:shearX(shear)
 	checkArgument(1, shear, 'number')
 	self._shearX = shear
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the vertical shearing factor of the transform.
@@ -743,7 +726,7 @@ end
 function Transform:shearY(shear)
 	checkArgument(1, shear, 'number')
 	self._shearY = shear
-	self:_updateTransform()
+	self:_update()
 end
 
 --- Sets the horizontal and vertical shearing factor of the transform.
@@ -754,18 +737,16 @@ function Transform:shear(shearX, shearY)
 	checkOptionalArgument(2, shearY, 'number')
 	self._shearX = shearX
 	self._shearY = shearY or shearX
-	self:_updateTransform()
+	self:_update()
 end
 
 function Transform:onEndChildren(...)
-	self:_updateDimensions()
+	self:_update()
 end
 
 function Transform:draw(stencilValue)
 	if not self:hasChildren() then return end
 	love.graphics.push 'all'
-	love.graphics.translate(self:get 'x', self:get 'y')
-	love.graphics.translate(-self._childrenShiftX, -self._childrenShiftY)
 	love.graphics.applyTransform(self._transform)
 	for _, child in ipairs(self._children) do
 		child:draw(stencilValue)
@@ -964,9 +945,10 @@ local Text = newElementClass(Element)
 -- @number y the vertical position of the text
 function Text:new(font, text, x, y)
 	checkArgument(2, font, 'Font')
-	checkArgument(3, text, 'string')
+	checkArgument(3, text, 'string', 'number')
 	checkOptionalArgument(4, x, 'number')
 	checkOptionalArgument(5, y, 'number')
+	text = tostring(text)
 	self._font = font
 	self._text = text
 	self._naturalWidth = font:getWidth(text)
@@ -1091,11 +1073,12 @@ local Paragraph = newElementClass(Element)
 -- @number y the vertical position of the paragraph
 function Paragraph:new(font, text, limit, align, x, y)
 	checkArgument(2, font, 'Font')
-	checkArgument(3, text, 'string')
+	checkArgument(3, text, 'string', 'number')
 	checkArgument(4, limit, 'number')
 	checkOptionalArgument(5, align, 'string')
 	checkOptionalArgument(6, x, 'number')
 	checkOptionalArgument(7, y, 'number')
+	text = tostring(text)
 	self._font = font
 	self._text = text
 	self._limit = limit

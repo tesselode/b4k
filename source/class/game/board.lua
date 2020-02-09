@@ -314,16 +314,33 @@ function Board:drawSquareHighlights()
 	love.graphics.pop()
 end
 
+function Board:drawSquaresCounter()
+	if self.totalSquares == 0 then return end
+	local left, top = self.transform:transformPoint(0, self.height + 1/4)
+	local layout = self.pool.data.layout
+	layout
+		:new 'rectangle'
+			:beginChildren()
+				:new 'transform'
+					:beginChildren()
+						:new 'rectangle'
+							:size(self.scale * 1.5, self.scale * 1.5)
+							:outlineColor(1, 1, 1)
+							:outlineWidth(8)
+							:beginChildren()
+								:new('text', font.hud, self.totalSquares)
+									:centerX(layout:get('@parent', 'width') * .55)
+									:centerY(layout:get('@parent', 'height') * .45)
+							:endChildren()
+					:endChildren()
+					:origin(.5)
+					:scale(self.hudSquaresTextScale)
+			:endChildren()
+			:left(left):top(top)
+end
+
 function Board:drawHud()
-	if self.totalSquares > 0 then
-		local text = self.totalSquares == 1 and '1 square' or self.totalSquares .. ' squares'
-		local centerX, top = self.transform:transformPoint(self.width/2, self.height + 1/4)
-		self.pool.data.layout
-			:new('text', font.hud, text)
-				:centerX(centerX)
-				:top(top)
-				:scale(self.hudSquaresTextScale)
-	end
+	self:drawSquaresCounter()
 	local centerX, bottom = self.transform:transformPoint(self.width/2, -1/4)
 	self.pool.data.layout
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
