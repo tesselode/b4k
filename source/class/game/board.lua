@@ -57,6 +57,7 @@ function Board:new(pool)
 
 	-- cosmetic
 	self.hudSquaresTextScale = 1
+	self.hudChainTextScale = 1
 	self.rollingScore = 0
 end
 
@@ -124,6 +125,7 @@ end
 function Board:updateChain()
 	if self.totalSquares > 0 then
 		self.chain = self.chain + 1
+		self:playChainTextPulseAnimation()
 	else
 		self.chain = 1
 	end
@@ -291,6 +293,14 @@ function Board:playSquaresTextPulseAnimation()
 	self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
 end
 
+function Board:playChainTextPulseAnimation()
+	if self.hudChainTextScaleTween then
+		self.hudChainTextScaleTween:stop()
+	end
+	self.hudChainTextScale = 1.25
+	self.hudChainTextScaleTween = self.pool.data.tweens:to(self, .3, {hudChainTextScale = 1})
+end
+
 function Board:stencil()
 	love.graphics.rectangle('fill', 0, 0, self.width, self.height)
 end
@@ -364,9 +374,21 @@ function Board:drawSquaresCounter()
 end
 
 function Board:drawChainCounter()
+	if self.chain < 2 then return end
 	local right, top = self.transform:transformPoint(self.width, self.height + 1/4)
-	self.pool.data.layout
-		:new('text', font.hud, self.chain)
+	local layout = self.pool.data.layout
+	layout
+		:new 'rectangle'
+			:beginChildren()
+				:new 'transform'
+					:beginChildren()
+						:new('text', font.hud, self.chain .. 'x')
+						local chainText = layout:getElement()
+					layout:endChildren()
+					:origin(.5)
+					:scale(self.hudChainTextScale)
+			:endChildren()
+			:width(layout:get(chainText, 'width'))
 			:right(right)
 			:top(top)
 end
