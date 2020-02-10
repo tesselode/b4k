@@ -87,7 +87,7 @@ end
 
 function Board:updateTiles(dt)
 	for _, tile in ipairs(self.tiles) do
-		tile:_update(dt)
+		tile:update(dt)
 	end
 end
 
@@ -314,7 +314,7 @@ function Board:drawTiles()
 	love.graphics.stencil(self.stencil)
 	love.graphics.setStencilTest('greater', 0)
 	for _, tile in ipairs(self.tiles) do
-		tile:_draw()
+		tile:draw()
 	end
 	love.graphics.pop()
 end

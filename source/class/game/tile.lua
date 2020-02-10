@@ -117,7 +117,7 @@ function Tile:fall()
 	end
 end
 
-function Tile:_update(dt)
+function Tile:update(dt)
 	if self.fallAnimation.playing then
 		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
 		self.fallAnimation.y = self.fallAnimation.y + self.fallAnimation.velocity * dt
@@ -150,7 +150,7 @@ function Tile:getDisplayPosition()
 	return self.x, self.y
 end
 
-function Tile:_draw()
+function Tile:draw()
 	love.graphics.push 'all'
 	love.graphics.setColor(self.colors[self.color])
 	local x, y = self:getDisplayPosition()
