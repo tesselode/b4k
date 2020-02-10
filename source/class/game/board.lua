@@ -3,6 +3,7 @@ local constant = require 'constant'
 local font = require 'font'
 local Object = require 'lib.classic'
 local ScorePopup = require 'class.game.score-popup'
+local SquareHighlight = require 'class.game.square-highlight'
 local Tile = require 'class.game.tile'
 local util = require 'util'
 
@@ -41,9 +42,20 @@ function Board:initTiles()
 	end
 end
 
+function Board:initSquareHighlights()
+	self.squareHighlights = {}
+	for x = 0, self.width - 2 do
+		self.squareHighlights[x] = {}
+		for y = 0, self.height - 2 do
+			self.squareHighlights[x][y] = SquareHighlight(self.pool, x, y)
+		end
+	end
+end
+
 function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
+	self:initSquareHighlights()
 	self:initTransform()
 	self.squares = {}
 	self.totalSquares = 0
@@ -146,6 +158,9 @@ function Board:detectSquares()
 				if not previousSquares[index] then
 					newSquares = newSquares + 1
 				end
+				self.squareHighlights[x][y]:activate()
+			else
+				self.squareHighlights[x][y]:deactivate()
 			end
 		end
 	end
@@ -234,6 +249,13 @@ function Board:clearTiles()
 	-- queue up a tile removal pass if needed
 	if numClearedTiles > 0 then
 		table.insert(self.queue, self.removeTiles)
+	end
+
+	-- deactivate all square highlights
+	for x = 0, self.width - 2 do
+		for y = 0, self.height - 2 do
+			self.squareHighlights[x][y]:burst()
+		end
 	end
 end
 
@@ -328,16 +350,11 @@ function Board:drawCursor()
 end
 
 function Board:drawSquareHighlights()
-	love.graphics.push 'all'
-	love.graphics.setColor(color.white)
-	love.graphics.setLineWidth(.05)
-	for i = 0, self.width * self.height - 1 do
-		if self.squares[i] then
-			local x, y = util.indexToCoordinates(self.width, i)
-			love.graphics.rectangle('line', x, y, 2, 2)
+	for x = 0, self.width - 2 do
+		for y = 0, self.height - 2 do
+			self.squareHighlights[x][y]:draw()
 		end
 	end
-	love.graphics.pop()
 end
 
 function Board:drawSquaresCounter()
