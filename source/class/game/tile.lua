@@ -12,7 +12,7 @@ Tile.colors = {
 Tile.spawnAnimationDuration = 1/2
 Tile.spawnAnimationStaggerAmount = .05
 Tile.rotationAnimationDuration = 1/3
-Tile.clearAnimationDuration = 1/2
+Tile.clearAnimationDuration = .4
 Tile.gravity = 50
 
 function Tile:new(pool, x, y)
@@ -117,6 +117,14 @@ function Tile:fall()
 	end
 end
 
+function Tile:clear()
+	self.cleared = true
+	self.playingClearAnimation = true
+	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
+		:ease 'quartout'
+		:oncomplete(function() self.playingClearAnimation = false end)
+end
+
 function Tile:update(dt)
 	if self.fallAnimation.playing then
 		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
@@ -129,14 +137,6 @@ function Tile:update(dt)
 			self.fallAnimation.velocity = nil
 		end
 	end
-end
-
-function Tile:clear()
-	self.cleared = true
-	self.playingClearAnimation = true
-	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
-		:ease 'backin'
-		:oncomplete(function() self.playingClearAnimation = false end)
 end
 
 function Tile:getDisplayPosition()
