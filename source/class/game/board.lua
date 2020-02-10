@@ -168,8 +168,12 @@ function Board:rotate(x, y, counterClockwise)
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
 	local numNewSquares = self:detectSquares()
-	if self.totalSquares > 0 and numNewSquares == 0 then
-		table.insert(self.queue, self.clearTiles)
+	if self.totalSquares > 0 then
+		if numNewSquares == 0 then
+			table.insert(self.queue, self.clearTiles)
+		end
+	else
+		self.chain = 1
 	end
 end
 
