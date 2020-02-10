@@ -1,10 +1,10 @@
-local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
 local Object = require 'lib.classic'
 local ScorePopup = require 'class.game.score-popup'
 local SquareHighlight = require 'class.game.square-highlight'
 local Tile = require 'class.game.tile'
+local TileClearParticles = require 'class.game.tile-clear-particles'
 local util = require 'util'
 
 local Board = Object:extend()
@@ -230,6 +230,11 @@ function Board:clearTiles()
 	scoreIncrement = scoreIncrement * self.chain
 	self.score = self.score + scoreIncrement
 
+	-- emit particles
+	for tile in pairs(clearedTiles) do
+		self.pool:queue(TileClearParticles(tile))
+	end
+
 	-- spawn the score popup
 	local scorePopupX, scorePopupY = self.transform:transformPoint(
 		sumTilesX / numClearedTiles + .5,
@@ -429,6 +434,7 @@ function Board:draw()
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
 	self:drawSquareHighlights()
+	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
 	self:drawHud()
 	love.graphics.pop()
