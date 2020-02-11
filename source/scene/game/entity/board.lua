@@ -57,6 +57,7 @@ function Board:new(pool)
 	self:initTiles()
 	self:initSquareHighlights()
 	self:initTransform()
+	self.wasFree = true
 	self.squares = {}
 	self.totalSquares = 0
 	self.queue = {}
@@ -64,7 +65,7 @@ function Board:new(pool)
 	self.cursorX, self.cursorY = 0, 0
 	self.chain = 1
 	self.score = 0
-	self:detectSquares()
+	self:checkSquares()
 	self.stencil = util.bind(self.stencil, self)
 
 	-- cosmetic
@@ -88,6 +89,9 @@ function Board:flushQueue()
 		self.queue[1](self)
 		table.remove(self.queue, 1)
 	end
+	if self:isFree() and not self.wasFree then
+		self.pool:emit('onBoardBecameFree', self)
+	end
 end
 
 function Board:updateRollingScore(dt)
@@ -104,9 +108,10 @@ function Board:updateTiles(dt)
 end
 
 function Board:update(dt)
-	self:flushQueue()
 	self:updateTiles(dt)
+	self:flushQueue()
 	self:updateRollingScore(dt)
+	self.wasFree = self:isFree()
 end
 
 function Board:getTileAt(x, y)
@@ -144,7 +149,7 @@ function Board:updateChain()
 end
 
 -- checks for new matching-color squares
-function Board:detectSquares()
+function Board:checkSquares()
 	local previousSquares = self.squares
 	self.squares = {}
 	self.totalSquares = 0
@@ -164,6 +169,7 @@ function Board:detectSquares()
 			end
 		end
 	end
+	self.pool:emit('onBoardCheckedSquares', self, self.squares, self.totalSquares, newSquares)
 	if newSquares > 0 then
 		self:playSquaresTextPulseAnimation()
 	end
@@ -182,7 +188,8 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate('topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
-	local numNewSquares = self:detectSquares()
+	self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
+	local numNewSquares = self:checkSquares()
 	if self.totalSquares > 0 then
 		if numNewSquares == 0 then
 			table.insert(self.queue, self.clearTiles)
@@ -221,6 +228,8 @@ function Board:clearTiles()
 			end
 		end
 	end
+
+	self.pool:emit('onBoardClearingTiles', self, clearedTiles, numClearedTiles)
 
 	-- award points
 	local scoreIncrement = 0
@@ -274,6 +283,7 @@ function Board:removeTiles()
 			table.remove(self.tiles, i)
 		end
 	end
+	self.pool:emit('onBoardRemovedTiles', self)
 	-- tell tiles above holes to fall and spawn new tiles
 	for x = 0, self.width - 1 do
 		-- spawn new tiles
@@ -294,7 +304,7 @@ function Board:removeTiles()
 			end
 		end
 	end
-	table.insert(self.queue, self.detectSquares)
+	table.insert(self.queue, self.checkSquares)
 	table.insert(self.queue, self.updateChain)
 end
 

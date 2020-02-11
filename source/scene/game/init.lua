@@ -11,6 +11,7 @@ function Game:enter()
 		systems = {
 			require 'scene.game.system.timer',
 			require 'scene.game.system.layout',
+			require 'scene.game.system.game-rules',
 			nata.oop(),
 		},
 	}
