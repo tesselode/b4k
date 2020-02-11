@@ -43,7 +43,20 @@ function SquareHighlight:burst()
 	})
 end
 
-function SquareHighlight:draw()
+function SquareHighlight:onBoardCheckedSquares(board, squares, totalSquares, newSquares)
+	local index = self.y * board.width + self.x
+	if squares[index] then
+		self:activate()
+	else
+		self:deactivate()
+	end
+end
+
+function SquareHighlight:onBoardClearingTiles(board, clearedTiles, numClearedTiles)
+	self:burst()
+end
+
+function SquareHighlight:drawOnBoard()
 	love.graphics.push 'all'
 	love.graphics.setColor(color.withAlpha(color.white, self.alpha))
 	love.graphics.setLineWidth(.1)

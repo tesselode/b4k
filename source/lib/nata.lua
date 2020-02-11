@@ -241,6 +241,7 @@ function Pool:_init(options, ...)
 	self:_validateOptions(options)
 	options = options or {}
 	self._queue = {}
+	self._entitiesToFlush = {}
 	self.entities = {}
 	self.hasEntity = {}
 	self.groups = {}
@@ -279,6 +280,11 @@ end
 function Pool:flush()
 	for i = 1, #self._queue do
 		local entity = self._queue[i]
+		self._entitiesToFlush[i] = entity
+		self._queue[i] = nil
+	end
+	for i = 1, #self._entitiesToFlush do
+		local entity = self._entitiesToFlush[i]
 		-- check if the entity belongs in each group and
 		-- add it to/remove it from the group as needed
 		for groupName, group in pairs(self.groups) do
@@ -301,7 +307,7 @@ function Pool:flush()
 			self.hasEntity[entity] = true
 			self:emit('add', entity)
 		end
-		self._queue[i] = nil
+		self._entitiesToFlush[i] = nil
 	end
 	-- re-sort groups
 	for _, group in pairs(self.groups) do
