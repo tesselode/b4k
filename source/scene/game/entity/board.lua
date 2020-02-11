@@ -1,7 +1,5 @@
 local constant = require 'constant'
-local font = require 'font'
 local Object = require 'lib.classic'
-local ScorePopup = require 'scene.game.entity.score-popup'
 local SquareHighlight = require 'scene.game.entity.square-highlight'
 local Tile = require 'scene.game.entity.tile'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
@@ -13,8 +11,6 @@ Board.width = 8
 Board.height = 8
 Board.sizeOnScreen = .6
 Board.cursorLineWidth = .1
-Board.rollingScoreSpeed = 10
-Board.rollingScoreRoundUpThreshold = .4
 
 --[[
 	initializes the transform used for drawing and converting
@@ -63,15 +59,8 @@ function Board:new(pool)
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
-	self.chain = 1
-	self.score = 0
 	self:checkSquares()
 	self.stencil = util.bind(self.stencil, self)
-
-	-- cosmetic
-	self.hudSquaresTextScale = 1
-	self.hudChainTextScale = 1
-	self.rollingScore = 0
 end
 
 -- returns if the board is free to do the next queued action
@@ -89,16 +78,6 @@ function Board:flushQueue()
 		self.queue[1](self)
 		table.remove(self.queue, 1)
 	end
-	if self:isFree() and not self.wasFree then
-		self.pool:emit('onBoardBecameFree', self)
-	end
-end
-
-function Board:updateRollingScore(dt)
-	self.rollingScore = util.lerp(self.rollingScore, self.score, self.rollingScoreSpeed * dt)
-	if self.rollingScore > self.score - self.rollingScoreRoundUpThreshold then
-		self.rollingScore = self.score
-	end
 end
 
 function Board:updateTiles(dt)
@@ -107,11 +86,17 @@ function Board:updateTiles(dt)
 	end
 end
 
+function Board:checkIfNewlyFree()
+	if self:isFree() and not self.wasFree then
+		self.pool:emit('onBoardBecameFree', self)
+	end
+	self.wasFree = self:isFree()
+end
+
 function Board:update(dt)
 	self:updateTiles(dt)
 	self:flushQueue()
-	self:updateRollingScore(dt)
-	self.wasFree = self:isFree()
+	self:checkIfNewlyFree()
 end
 
 function Board:getTileAt(x, y)
@@ -139,15 +124,6 @@ function Board:squareAt(x, y)
 		and bottomRight.color == bottomLeft.color
 end
 
-function Board:updateChain()
-	if self.totalSquares > 0 then
-		self.chain = self.chain + 1
-		self:playChainTextPulseAnimation()
-	else
-		self.chain = 1
-	end
-end
-
 -- checks for new matching-color squares
 function Board:checkSquares()
 	local previousSquares = self.squares
@@ -170,9 +146,6 @@ function Board:checkSquares()
 		end
 	end
 	self.pool:emit('onBoardCheckedSquares', self, self.squares, self.totalSquares, newSquares)
-	if newSquares > 0 then
-		self:playSquaresTextPulseAnimation()
-	end
 	return newSquares
 end
 
@@ -194,21 +167,12 @@ function Board:rotate(x, y, counterClockwise)
 		if numNewSquares == 0 then
 			table.insert(self.queue, self.clearTiles)
 		end
-	else
-		self.chain = 1
 	end
 end
 
 -- marks tiles that are in matching-color squares as cleared
 -- and plays the clear animation. also awards points for those squares
 function Board:clearTiles()
-	--[[
-		the sum of the x and y positions of each tile.
-		this is used to get the average position of all the cleared
-		tiles because we're going to spawn the score popup
-		there (it looks nicer that way)
-	]]
-	local sumTilesX, sumTilesY = 0, 0
 	local clearedTiles = {}
 	local numClearedTiles = 0
 	for i = 0, self.width * self.height - 1 do
@@ -219,8 +183,6 @@ function Board:clearTiles()
 					local tile = self:getTileAt(tileX, tileY)
 					if tile and not clearedTiles[tile] then
 						tile:clear()
-						sumTilesX = sumTilesX + tile.x
-						sumTilesY = sumTilesY + tile.y
 						numClearedTiles = numClearedTiles + 1
 						clearedTiles[tile] = true
 					end
@@ -231,32 +193,10 @@ function Board:clearTiles()
 
 	self.pool:emit('onBoardClearingTiles', self, clearedTiles, numClearedTiles)
 
-	-- award points
-	local scoreIncrement = 0
-	for i = 1, self.totalSquares do
-		scoreIncrement = scoreIncrement + i
-	end
-	scoreIncrement = scoreIncrement * self.chain
-	self.score = self.score + scoreIncrement
-
 	-- emit particles
 	for tile in pairs(clearedTiles) do
 		self.pool:queue(TileClearParticles(tile))
 	end
-
-	-- spawn the score popup
-	local scorePopupX, scorePopupY = self.transform:transformPoint(
-		sumTilesX / numClearedTiles + .5,
-		sumTilesY / numClearedTiles + .5
-	)
-	self.pool:queue(ScorePopup(
-		self.pool,
-		scorePopupX,
-		scorePopupY,
-		self.totalSquares,
-		scoreIncrement,
-		self.chain
-	))
 
 	util.clear(self.squares)
 
@@ -305,7 +245,6 @@ function Board:removeTiles()
 		end
 	end
 	table.insert(self.queue, self.checkSquares)
-	table.insert(self.queue, self.updateChain)
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
@@ -324,22 +263,6 @@ function Board:mousepressed(x, y, button, istouch, presses)
 			self:rotate(self.cursorX, self.cursorY)
 		end
 	end
-end
-
-function Board:playSquaresTextPulseAnimation()
-	if self.hudSquaresTextScaleTween then
-		self.hudSquaresTextScaleTween:stop()
-	end
-	self.hudSquaresTextScale = 1.1
-	self.hudSquaresTextScaleTween = self.pool.data.tweens:to(self, .15, {hudSquaresTextScale = 1})
-end
-
-function Board:playChainTextPulseAnimation()
-	if self.hudChainTextScaleTween then
-		self.hudChainTextScaleTween:stop()
-	end
-	self.hudChainTextScale = 1.25
-	self.hudChainTextScaleTween = self.pool.data.tweens:to(self, .3, {hudChainTextScale = 1})
 end
 
 function Board:stencil()
@@ -372,73 +295,6 @@ function Board:drawSquareHighlights()
 	end
 end
 
-function Board:drawSquaresCounter()
-	if self.totalSquares == 0 then return end
-	local left, top = self.transform:transformPoint(0, self.height + 1/4)
-	local layout = self.pool.data.layout
-	layout
-		:new 'rectangle'
-			:beginChildren()
-				:new 'transform'
-					:beginChildren()
-						:new 'rectangle'
-							:size(self.scale * 1.5, self.scale * 1.5)
-							:outlineColor(1, 1, 1)
-							:outlineWidth(8)
-							:beginChildren()
-								:new('line',
-									0, layout:get('@parent', 'height') / 2,
-									layout:get('@parent', 'width'), layout:get('@parent', 'height') / 2
-								)
-									:color(.25, .25, .25)
-									:lineWidth(8)
-								:new('line',
-									layout:get('@parent', 'width') / 2, 0,
-									layout:get('@parent', 'width') / 2, layout:get('@parent', 'height')
-								)
-									:color(.25, .25, .25)
-									:lineWidth(8)
-								:new('text', font.hud, self.totalSquares)
-									:centerX(layout:get('@parent', 'width') * .55)
-									:centerY(layout:get('@parent', 'height') * .45)
-							:endChildren()
-					:endChildren()
-					:origin(.5)
-					:scale(self.hudSquaresTextScale)
-			:endChildren()
-			:left(left):top(top)
-end
-
-function Board:drawChainCounter()
-	if self.chain < 2 then return end
-	local right, top = self.transform:transformPoint(self.width, self.height + 1/4)
-	local layout = self.pool.data.layout
-	layout
-		:new 'rectangle'
-			:beginChildren()
-				:new 'transform'
-					:beginChildren()
-						:new('text', font.hud, self.chain .. 'x')
-						local chainText = layout:getElement()
-					layout:endChildren()
-					:origin(.5)
-					:scale(self.hudChainTextScale)
-			:endChildren()
-			:width(layout:get(chainText, 'width'))
-			:right(right)
-			:top(top)
-end
-
-function Board:drawHud()
-	self:drawSquaresCounter()
-	self:drawChainCounter()
-	local centerX, bottom = self.transform:transformPoint(self.width/2, -1/4)
-	self.pool.data.layout
-		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
-			:centerX(centerX)
-			:bottom(bottom)
-end
-
 function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
@@ -446,7 +302,6 @@ function Board:draw()
 	self:drawSquareHighlights()
 	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
-	self:drawHud()
 	love.graphics.pop()
 end
 

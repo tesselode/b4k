@@ -8,6 +8,9 @@ local Game = Object:extend()
 
 function Game:enter()
 	self.pool = nata.new {
+		groups = {
+			board = {filter = function(e) return e:is(Board) end},
+		},
 		systems = {
 			require 'scene.game.system.timer',
 			require 'scene.game.system.layout',
