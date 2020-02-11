@@ -1,6 +1,5 @@
 local constant = require 'constant'
 local Object = require 'lib.classic'
-local SquareHighlight = require 'scene.game.entity.square-highlight'
 local Tile = require 'scene.game.entity.tile'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 local util = require 'util'
@@ -38,20 +37,9 @@ function Board:initTiles()
 	end
 end
 
-function Board:initSquareHighlights()
-	self.squareHighlights = {}
-	for x = 0, self.width - 2 do
-		self.squareHighlights[x] = {}
-		for y = 0, self.height - 2 do
-			self.squareHighlights[x][y] = SquareHighlight(self.pool, x, y)
-		end
-	end
-end
-
 function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
-	self:initSquareHighlights()
 	self:initTransform()
 	self.wasFree = true
 	self.squares = {}
@@ -59,8 +47,12 @@ function Board:new(pool)
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
-	self:checkSquares()
 	self.stencil = util.bind(self.stencil, self)
+end
+
+function Board:add(e)
+	if e ~= self then return end
+	self:checkSquares()
 end
 
 -- returns if the board is free to do the next queued action
@@ -139,9 +131,6 @@ function Board:checkSquares()
 				if not previousSquares[index] then
 					newSquares = newSquares + 1
 				end
-				self.squareHighlights[x][y]:activate()
-			else
-				self.squareHighlights[x][y]:deactivate()
 			end
 		end
 	end
@@ -203,13 +192,6 @@ function Board:clearTiles()
 	-- queue up a tile removal pass if needed
 	if numClearedTiles > 0 then
 		table.insert(self.queue, self.removeTiles)
-	end
-
-	-- deactivate all square highlights
-	for x = 0, self.width - 2 do
-		for y = 0, self.height - 2 do
-			self.squareHighlights[x][y]:burst()
-		end
 	end
 end
 
@@ -287,19 +269,10 @@ function Board:drawCursor()
 	love.graphics.pop()
 end
 
-function Board:drawSquareHighlights()
-	for x = 0, self.width - 2 do
-		for y = 0, self.height - 2 do
-			self.squareHighlights[x][y]:draw()
-		end
-	end
-end
-
 function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
-	self:drawSquareHighlights()
 	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
 	love.graphics.pop()
