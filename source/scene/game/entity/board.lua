@@ -1,10 +1,10 @@
 local constant = require 'constant'
 local font = require 'font'
 local Object = require 'lib.classic'
-local ScorePopup = require 'class.game.score-popup'
-local SquareHighlight = require 'class.game.square-highlight'
-local Tile = require 'class.game.tile'
-local TileClearParticles = require 'class.game.tile-clear-particles'
+local ScorePopup = require 'scene.game.entity.score-popup'
+local SquareHighlight = require 'scene.game.entity.square-highlight'
+local Tile = require 'scene.game.entity.tile'
+local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 local util = require 'util'
 
 local Board = Object:extend()

@@ -1,4 +1,4 @@
-local Board = require 'class.game.board'
+local Board = require 'scene.game.entity.board'
 local Object = require 'lib.classic'
 local nata = require 'lib.nata'
 
@@ -9,8 +9,8 @@ local Game = Object:extend()
 function Game:enter()
 	self.pool = nata.new {
 		systems = {
-			require 'system.timer',
-			require 'system.layout',
+			require 'scene.game.system.timer',
+			require 'scene.game.system.layout',
 			nata.oop(),
 		},
 	}
