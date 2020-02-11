@@ -1,4 +1,5 @@
 local color = require 'color'
+local constant = require 'constant'
 local Object = require 'lib.classic'
 
 local SquareHighlight = Object:extend()
@@ -44,7 +45,7 @@ function SquareHighlight:burst()
 end
 
 function SquareHighlight:onBoardCheckedSquares(board, squares, totalSquares, newSquares)
-	local index = self.y * board.width + self.x
+	local index = self.y * constant.boardWidth + self.x
 	if squares[index] then
 		self:activate()
 	else

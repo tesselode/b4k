@@ -6,8 +6,6 @@ local util = require 'util'
 
 local Board = Object:extend()
 
-Board.width = 8
-Board.height = 8
 Board.sizeOnScreen = .6
 Board.cursorLineWidth = .1
 
@@ -17,11 +15,11 @@ Board.cursorLineWidth = .1
 	coordinate system, each tile is 1 unit square
 ]]
 function Board:initTransform()
-	self.scale = constant.screenHeight * self.sizeOnScreen / self.height
+	self.scale = constant.screenHeight * self.sizeOnScreen / constant.boardHeight
 	self.transform = love.math.newTransform()
 	self.transform:translate(constant.screenWidth / 2, constant.screenHeight / 2)
 	self.transform:scale(self.scale)
-	self.transform:translate(-self.width / 2, -self.height / 2)
+	self.transform:translate(-constant.boardWidth / 2, -constant.boardHeight / 2)
 end
 
 function Board:spawnTile(x, y)
@@ -30,8 +28,8 @@ end
 
 function Board:initTiles()
 	self.tiles = {}
-	for x = 0, self.width - 1 do
-		for y = 0, self.height - 1 do
+	for x = 0, constant.boardWidth - 1 do
+		for y = 0, constant.boardHeight - 1 do
 			self:spawnTile(x, y)
 		end
 	end
@@ -102,7 +100,7 @@ end
 -- returns if there's a 2x2 square of same-colored tiles
 -- with the top-left corner at (x, y)
 function Board:squareAt(x, y)
-	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
+	assert(x >= 0 and x <= constant.boardWidth - 2 and y >= 0 and y <= constant.boardHeight - 2,
 		'trying to detect squares out of bounds')
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -122,9 +120,9 @@ function Board:checkSquares()
 	self.squares = {}
 	self.totalSquares = 0
 	local newSquares = 0
-	for x = 0, self.width - 2 do
-		for y = 0, self.height - 2 do
-			local index = y * self.width + x
+	for x = 0, constant.boardWidth - 2 do
+		for y = 0, constant.boardHeight - 2 do
+			local index = y * constant.boardWidth + x
 			if self:squareAt(x, y) then
 				self.squares[index] = true
 				self.totalSquares = self.totalSquares + 1
@@ -140,7 +138,7 @@ end
 
 -- rotates a 2x2 square of tiles with the top-left corner at (x, y)
 function Board:rotate(x, y, counterClockwise)
-	assert(x >= 0 and x <= self.width - 2 and y >= 0 and y <= self.height - 2,
+	assert(x >= 0 and x <= constant.boardWidth - 2 and y >= 0 and y <= constant.boardHeight - 2,
 		'trying to rotate tiles out of bounds')
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -164,9 +162,9 @@ end
 function Board:clearTiles()
 	local clearedTiles = {}
 	local numClearedTiles = 0
-	for i = 0, self.width * self.height - 1 do
+	for i = 0, constant.boardWidth * constant.boardHeight - 1 do
 		if self.squares[i] then
-			local x, y = util.indexToCoordinates(self.width, i)
+			local x, y = util.indexToCoordinates(constant.boardWidth, i)
 			for tileX = x, x + 1 do
 				for tileY = y, y + 1 do
 					local tile = self:getTileAt(tileX, tileY)
@@ -207,19 +205,19 @@ function Board:removeTiles()
 	end
 	self.pool:emit('onBoardRemovedTiles', self)
 	-- tell tiles above holes to fall and spawn new tiles
-	for x = 0, self.width - 1 do
+	for x = 0, constant.boardWidth - 1 do
 		-- spawn new tiles
 		local holesInColumn = 0
-		for y = self.height - 1, 0, -1 do
+		for y = constant.boardHeight - 1, 0, -1 do
 			if not self:getTileAt(x, y) then
 				holesInColumn = holesInColumn + 1
 				self:spawnTile(x, -holesInColumn)
 			end
 		end
 		-- make tiles fall
-		for y = self.height - 1, 0, -1 do
+		for y = constant.boardHeight - 1, 0, -1 do
 			if not self:getTileAt(x, y) then
-				for yy = -self.height, y - 1 do
+				for yy = -constant.boardHeight, y - 1 do
 					local tile = self:getTileAt(x, yy)
 					if tile then tile:fall() end
 				end
@@ -231,10 +229,10 @@ end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
 	x, y = self.transform:inverseTransformPoint(x, y)
-	self.mouseInBounds = not (x < 0 or x > self.width or y < 0 or y > self.height)
+	self.mouseInBounds = not (x < 0 or x > constant.boardWidth or y < 0 or y > constant.boardHeight)
 	self.cursorX, self.cursorY = math.floor(x), math.floor(y)
-	self.cursorX = util.clamp(self.cursorX, 0, self.width - 2)
-	self.cursorY = util.clamp(self.cursorY, 0, self.height - 2)
+	self.cursorX = util.clamp(self.cursorX, 0, constant.boardWidth - 2)
+	self.cursorY = util.clamp(self.cursorY, 0, constant.boardHeight - 2)
 end
 
 function Board:mousepressed(x, y, button, istouch, presses)
@@ -248,7 +246,7 @@ function Board:mousepressed(x, y, button, istouch, presses)
 end
 
 function Board:stencil()
-	love.graphics.rectangle('fill', 0, 0, self.width, self.height)
+	love.graphics.rectangle('fill', 0, 0, constant.boardWidth, constant.boardHeight)
 end
 
 function Board:drawTiles()

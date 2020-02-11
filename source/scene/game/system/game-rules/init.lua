@@ -1,3 +1,4 @@
+local constant = require 'constant'
 local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
 local util = require 'util'
@@ -94,7 +95,7 @@ end
 
 function basicGameRules:drawScore()
 	local board = self.pool.groups.board.entities[1]
-	local centerX, bottom = board.transform:transformPoint(board.width/2, -1/4)
+	local centerX, bottom = board.transform:transformPoint(constant.boardWidth/2, -1/4)
 	self.pool.data.layout
 		:new('text', font.hud, util.pad(math.floor(self.rollingScore), 0, 8))
 			:centerX(centerX)
@@ -104,7 +105,7 @@ end
 function basicGameRules:drawSquaresCounter()
 	local board = self.pool.groups.board.entities[1]
 	if board.totalSquares == 0 then return end
-	local left, top = board.transform:transformPoint(0, board.height + 1/4)
+	local left, top = board.transform:transformPoint(0, constant.boardHeight + 1/4)
 	local layout = self.pool.data.layout
 	layout
 		:new 'rectangle'
@@ -142,7 +143,7 @@ end
 function basicGameRules:drawChainCounter()
 	if self.chain < 2 then return end
 	local board = self.pool.groups.board.entities[1]
-	local right, top = board.transform:transformPoint(board.width, board.height + 1/4)
+	local right, top = board.transform:transformPoint(constant.boardWidth, constant.boardHeight + 1/4)
 	local layout = self.pool.data.layout
 	layout
 		:new 'rectangle'
