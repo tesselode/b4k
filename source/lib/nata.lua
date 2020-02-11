@@ -240,7 +240,10 @@ end
 function Pool:_init(options, ...)
 	self:_validateOptions(options)
 	options = options or {}
+	-- entities that will be added to the pool on the next flush
 	self._queue = {}
+	-- a temporary table for entities that will be added to the pool
+	-- on the current flush (see Pool.flush for more details)
 	self._entitiesToFlush = {}
 	self.entities = {}
 	self.hasEntity = {}
@@ -278,6 +281,15 @@ end
 --- Adds the queued entities to the pool. Entities are added
 -- in the order they were queued.
 function Pool:flush()
+	--[[
+		Move the currently queued entities to a temporary
+		table. This way, if an add/addToGroup/removeToGroup
+		event emission leads to another entity being queued,
+		it will be saved for the next flush, rather than
+		adding entities to the table we're in the middle
+		of iterating over, which would lead to an array with
+		holes and screw everything up.
+	]]
 	for i = 1, #self._queue do
 		local entity = self._queue[i]
 		self._entitiesToFlush[i] = entity
