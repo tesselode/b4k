@@ -15,11 +15,11 @@ Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
 Tile.gravity = 50
 
-function Tile:new(pool, x, y)
+function Tile:new(pool, x, y, color)
 	self.pool = pool
 	self.x = x
 	self.y = y
-	self.color = love.math.random(1, #self.colors)
+	self.color = color or love.math.random(1, #self.colors)
 	self.cleared = false
 	self.scale = 1
 	self.rotationAnimation = {

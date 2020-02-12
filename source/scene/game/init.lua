@@ -7,19 +7,18 @@ local function shouldRemove(e) return e.removeFromPool end
 local Game = Object:extend()
 
 function Game:enter()
-	self.pool = nata.new {
+	self.pool = nata.new({
 		groups = {
 			board = {filter = function(e) return e:is(Board) end},
 		},
 		systems = {
 			require 'scene.game.system.timer',
 			require 'scene.game.system.layout',
-			require 'scene.game.system.game-rules.time-attack',
+			require 'scene.game.system.game-rules.puzzle',
 			require 'scene.game.system.square-highlights',
 			nata.oop(),
 		},
-	}
-	self.pool:queue(Board(self.pool))
+	}, '1')
 end
 
 function Game:update(dt)

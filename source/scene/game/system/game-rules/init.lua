@@ -1,3 +1,4 @@
+local Board = require 'scene.game.entity.board'
 local constant = require 'constant'
 local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
@@ -9,6 +10,9 @@ local basicGameRules = {
 }
 
 function basicGameRules:init()
+	local board = self.pool:queue(Board(self.pool))
+	board:fillWithRandomTiles()
+
 	self.justRemovedTiles = false
 
 	-- scoring

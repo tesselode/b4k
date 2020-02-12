@@ -23,23 +23,27 @@ function Board:initTransform()
 	self.transform:translate(-constant.boardWidth / 2, -constant.boardHeight / 2)
 end
 
-function Board:spawnTile(x, y)
-	table.insert(self.tiles, Tile(self.pool, x, y))
+function Board:spawnTile(x, y, color)
+	table.insert(self.tiles, Tile(self.pool, x, y, color))
 end
 
 function Board:initTiles()
 	self.tiles = {}
-	for x = 0, constant.boardWidth - 1 do
-		for y = 0, constant.boardHeight - 1 do
-			self:spawnTile(x, y)
+	if not self.puzzleMode then
+		for x = 0, constant.boardWidth - 1 do
+			for y = 0, constant.boardHeight - 1 do
+				self:spawnTile(x, y)
+			end
 		end
+		self:scramble()
 	end
 end
 
-function Board:new(pool)
+function Board:new(pool, puzzleMode)
 	self.pool = pool
-	self:initTiles()
+	self.puzzleMode = puzzleMode
 	self:initTransform()
+	self:initTiles()
 	self.wasFree = true
 	self.squares = {}
 	self.totalSquares = 0
@@ -47,7 +51,6 @@ function Board:new(pool)
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
 	self.stencil = util.bind(self.stencil, self)
-	self:scramble()
 end
 
 -- returns if the board is free to do the next queued action
@@ -232,11 +235,13 @@ function Board:removeTiles()
 	-- tell tiles above holes to fall and spawn new tiles
 	for x = 0, constant.boardWidth - 1 do
 		-- spawn new tiles
-		local holesInColumn = 0
-		for y = constant.boardHeight - 1, 0, -1 do
-			if not self:getTileAt(x, y) then
-				holesInColumn = holesInColumn + 1
-				self:spawnTile(x, -holesInColumn)
+		if not self.puzzleMode then
+			local holesInColumn = 0
+			for y = constant.boardHeight - 1, 0, -1 do
+				if not self:getTileAt(x, y) then
+					holesInColumn = holesInColumn + 1
+					self:spawnTile(x, -holesInColumn)
+				end
 			end
 		end
 		-- make tiles fall
