@@ -23,6 +23,26 @@ function util.pad(text, padCharacter, numberOfCharacters)
 	return string.rep(padCharacter, numberOfCharacters - #text) .. text
 end
 
+function util.formatTime(time)
+	local decimal = time % 1
+	local seconds = math.floor(time % 60)
+	local minutes = math.floor((time / 60) % 60)
+	local hours = math.floor(time / 60 / 60)
+	local decimalString = ('%.2f'):format(decimal):sub(3, -1)
+	if hours > 0 then
+		return hours .. ':'
+			.. util.pad(minutes, 0, 2) .. ':'
+			.. util.pad(seconds, 0, 2) .. '.'
+			.. decimalString
+	elseif minutes > 0 then
+		return minutes .. ':'
+			.. util.pad(seconds, 0, 2) .. '.'
+			.. decimalString
+	else
+		return seconds .. '.' .. decimalString
+	end
+end
+
 -- tables
 function util.clear(t)
 	for k in pairs(t) do t[k] = nil end
