@@ -33,12 +33,11 @@ function ScorePopup:update(dt)
 end
 
 function ScorePopup:draw()
-	local text = self.squares == 1 and '1 square'
-		or string.format('%i squares', self.squares)
+	local text = ''
 	if self.chain > 1 then
-		text = text .. '\nchain x' .. self.chain
+		text = text .. 'chain x' .. self.chain .. '\n'
 	end
-	text = text .. '\n+' .. self.score
+	text = text .. '+' .. self.score
 	self.pool.data.layout
 		:new('paragraph', font.scorePopup, text, 100000, 'center')
 			:centerX(self.x):centerY(self.y)
