@@ -1,4 +1,5 @@
 local constant = require 'constant'
+local log = require 'lib.log'
 local Object = require 'lib.classic'
 local Tile = require 'scene.game.entity.tile'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
@@ -46,11 +47,7 @@ function Board:new(pool)
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
 	self.stencil = util.bind(self.stencil, self)
-end
-
-function Board:add(e)
-	if e ~= self then return end
-	self:checkSquares()
+	self:scramble()
 end
 
 -- returns if the board is free to do the next queued action
@@ -115,7 +112,7 @@ function Board:squareAt(x, y)
 end
 
 -- checks for new matching-color squares
-function Board:checkSquares()
+function Board:checkSquares(emitEvent)
 	local previousSquares = self.squares
 	self.squares = {}
 	self.totalSquares = 0
@@ -132,8 +129,36 @@ function Board:checkSquares()
 			end
 		end
 	end
-	self.pool:emit('onBoardCheckedSquares', self, self.squares, self.totalSquares, newSquares)
+	if emitEvent ~= false then
+		self.pool:emit('onBoardCheckedSquares', self, self.squares, self.totalSquares, newSquares)
+	end
 	return newSquares
+end
+
+-- changes the colors of tiles so that there's no matching squares
+function Board:scramble()
+	if #Tile.colors < 2 then return end
+	self:checkSquares(false)
+	if self.totalSquares < 1 then return end
+	log.trace 'scrambling the board'
+	local steps = 1
+	while true do
+		log.trace(('step %i: %i squares'):format(steps, self.totalSquares))
+		for square in pairs(self.squares) do
+			local x, y = util.indexToCoordinates(constant.boardWidth, square)
+			local tile = self:getTileAt(x, y)
+			tile.color = tile.color + 1
+			if tile.color > #tile.colors then tile.color = 1 end
+		end
+		self:checkSquares(false)
+		if self.totalSquares < 1 then
+			break
+		else
+			steps = steps + 1
+		end
+	end
+	log.trace(('scrambled the board in %i steps'):format(steps))
+	self:checkSquares()
 end
 
 -- rotates a 2x2 square of tiles with the top-left corner at (x, y)
