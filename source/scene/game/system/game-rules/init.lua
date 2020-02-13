@@ -42,7 +42,7 @@ function basicGameRules:onBoardCheckedSquares(board, squares, totalSquares, newS
 	end
 end
 
-function basicGameRules:onBoardClearingTiles(board, clearedTiles, numClearedTiles)
+function basicGameRules:_onBoardClearingTiles(board, clearedTiles, numClearedTiles)
 	local scoreIncrement = 0
 	for i = 1, board.totalSquares do
 		scoreIncrement = scoreIncrement + i

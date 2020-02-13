@@ -21,6 +21,7 @@ function Tile:new(pool, x, y, tileColor)
 	self.x = x
 	self.y = y
 	self.color = tileColor or love.math.random(1, #self.colors)
+	self.cleared = false
 	self.scale = 1
 	self.rotationAnimation = {
 		playing = false,
@@ -36,6 +37,17 @@ function Tile:new(pool, x, y, tileColor)
 		targetY = nil,
 		velocity = nil,
 	}
+end
+
+function Tile:clear()
+	return Promise(function(finish)
+		self.cleared = true
+		self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
+			:ease 'quartout'
+			:oncomplete(function()
+				finish()
+			end)
+	end)
 end
 
 function Tile:rotate(corner, counterClockwise)

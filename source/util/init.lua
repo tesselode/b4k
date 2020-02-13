@@ -57,11 +57,16 @@ end
 function util.async(f)
 	local co
 	local function await(promise)
-		promise:after(function() coroutine.resume(co) end)
+		if promise:isFinished() then return end
+		promise:after(function()
+			local success, message = coroutine.resume(co)
+			if not success then error(message) end
+		end)
 		coroutine.yield()
 	end
 	co = coroutine.create(function() f(await) end)
-	coroutine.resume(co)
+	local success, message = coroutine.resume(co)
+	if not success then error(message) end
 	return co
 end
 

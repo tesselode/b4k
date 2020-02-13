@@ -63,7 +63,7 @@ function Board:checkSquares()
 	end
 	self.pool:emit('onBoardCheckedSquares', self, squares, numSquares, numNewSquares)
 	self.previousSquares = squares
-	return squares, numSquares
+	return squares, numSquares, numNewSquares
 end
 
 function Board:fillWithRandomTiles()
@@ -162,13 +162,20 @@ function Board:rotate(x, y, counterClockwise)
 			table.insert(promises, bottomLeft:rotate('bottomLeft', counterClockwise))
 		end
 		self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
+		local rotateTilesPromise = Promise.all(promises)
 		if self:willTilesFall() then
 			self.canRotate = false
-			await(Promise.all(promises))
+			await(rotateTilesPromise)
 			await(self:fallTiles())
 			self.canRotate = true
 		end
-		self:checkSquares()
+		local squares, numSquares, numNewSquares = self:checkSquares()
+		if numSquares > 0 and numNewSquares < 1 then
+			self.canRotate = false
+			await(rotateTilesPromise)
+			await(self:clearTiles(squares))
+			self.canRotate = true
+		end
 	end)
 end
 
@@ -190,6 +197,71 @@ function Board:fallTiles()
 		end
 	end
 	return Promise.all(promises)
+end
+
+-- marks tiles that are in matching-color squares as cleared
+-- and plays the clear animation. also awards points for those squares
+function Board:clearTiles(squares)
+	return Promise(function(finish)
+		util.async(function(await)
+			local promises = {}
+			local clearedTiles = {}
+			local numClearedTiles = 0
+			for i = 0, constant.boardWidth * constant.boardHeight - 1 do
+				if not squares[i] then goto continue end
+				local x, y = util.indexToCoordinates(constant.boardWidth, i)
+				for tileX = x, x + 1 do
+					for tileY = y, y + 1 do
+						local tile = self:getTileAt(tileX, tileY)
+						if tile and not clearedTiles[tile] then
+							table.insert(promises, tile:clear())
+							numClearedTiles = numClearedTiles + 1
+							clearedTiles[tile] = true
+						end
+					end
+				end
+				::continue::
+			end
+			self.pool:emit('onBoardClearingTiles', self, clearedTiles, numClearedTiles)
+			if numClearedTiles > 0 then
+				await(Promise.all(promises))
+				await(self:removeTiles())
+			end
+			finish()
+		end)
+	end)
+end
+
+-- actually removes tiles from the board once they've
+-- finished their clear animation and spawns new ones
+function Board:removeTiles()
+	return Promise(function(finish)
+		util.async(function(await)
+			-- remove cleared tiles
+			for i = #self.tiles, 1, -1 do
+				local tile = self.tiles[i]
+				if tile.cleared then
+					table.remove(self.tiles, i)
+				end
+			end
+			self.pool:emit('onBoardRemovedTiles', self)
+			-- spawn new tiles to replace the removed ones
+			if not self.puzzleMode then
+				for x = 0, constant.boardWidth - 1 do
+					local holesInColumn = 0
+					for y = constant.boardHeight - 1, 0, -1 do
+						if not self:getTileAt(x, y) then
+							holesInColumn = holesInColumn + 1
+							self:spawnTile(x, -holesInColumn)
+						end
+					end
+				end
+			end
+			await(self:fallTiles())
+			self:checkSquares()
+			finish()
+		end)
+	end)
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)
