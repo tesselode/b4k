@@ -13,6 +13,7 @@ function basicGameRules:init()
 	local board = self.pool:queue(Board(self.pool))
 	board:fillWithRandomTiles()
 
+	self.numSquares = 0
 	self.justRemovedTiles = false
 
 	-- scoring
@@ -29,22 +30,23 @@ function basicGameRules:onBoardRemovedTiles(board)
 	self.justRemovedTiles = true
 end
 
-function basicGameRules:onBoardCheckedSquares(board, squares, totalSquares, newSquares)
-	if totalSquares < 1 then
+function basicGameRules:onBoardCheckedSquares(board, squares, numSquares, numNewSquares)
+	self.numSquares = numSquares
+	if numSquares < 1 then
 		self.chain = 1
 	elseif self.justRemovedTiles then
 		self.chain = self.chain + 1
 		self:playChainTextPulseAnimation()
 	end
 	self.justRemovedTiles = false
-	if newSquares > 0 then
+	if numNewSquares > 0 then
 		self:playSquaresTextPulseAnimation()
 	end
 end
 
-function basicGameRules:_onBoardClearingTiles(board, clearedTiles, numClearedTiles)
+function basicGameRules:onBoardClearingTiles(board, clearedTiles, numClearedTiles)
 	local scoreIncrement = 0
-	for i = 1, board.totalSquares do
+	for i = 1, self.numSquares do
 		scoreIncrement = scoreIncrement + i
 	end
 	scoreIncrement = scoreIncrement * self.chain
@@ -64,7 +66,7 @@ function basicGameRules:_onBoardClearingTiles(board, clearedTiles, numClearedTil
 		self.pool,
 		scorePopupX,
 		scorePopupY,
-		board.totalSquares,
+		self.numSquares,
 		scoreIncrement,
 		self.chain
 	))
@@ -108,7 +110,7 @@ end
 
 function basicGameRules:drawSquaresCounter()
 	local board = self.pool.groups.board.entities[1]
-	if board.totalSquares == 0 then return end
+	if self.numSquares == 0 then return end
 	local left, top = board.transform:transformPoint(0, constant.boardHeight + 1/4)
 	local layout = self.pool.data.layout
 	layout
@@ -133,7 +135,7 @@ function basicGameRules:drawSquaresCounter()
 								)
 									:color(.25, .25, .25)
 									:lineWidth(8)
-								:new('text', font.hud, board.totalSquares)
+								:new('text', font.hud, self.numSquares)
 									:centerX(layout:get('@parent', 'width') * .55)
 									:centerY(layout:get('@parent', 'height') * .45)
 							:endChildren()
@@ -166,9 +168,9 @@ function basicGameRules:drawChainCounter()
 end
 
 function basicGameRules:draw()
-	--self:drawScore()
-	--self:drawSquaresCounter()
-	--self:drawChainCounter()
+	self:drawScore()
+	self:drawSquaresCounter()
+	self:drawChainCounter()
 end
 
 return basicGameRules
