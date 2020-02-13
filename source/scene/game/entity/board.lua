@@ -72,7 +72,7 @@ function Board:fillWithRandomTiles()
 			self:spawnTile(x, y)
 		end
 	end
-	-- changes the colors of tiles so that there's no matching squares
+	-- change the colors of tiles so that there's no matching squares
 	if #Tile.colors < 2 then return end
 	local squares, numSquares = self:checkSquares()
 	if numSquares < 1 then return end

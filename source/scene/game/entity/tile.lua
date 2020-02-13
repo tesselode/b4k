@@ -10,8 +10,6 @@ Tile.colors = {
 	color.yellow,
 	color.red,
 }
-Tile.spawnAnimationDuration = 1/2
-Tile.spawnAnimationStaggerAmount = .05
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
 Tile.gravity = 50
@@ -30,12 +28,14 @@ function Tile:new(pool, x, y, tileColor)
 		angle = nil,
 		tween = nil,
 		flip = nil,
+		promise = nil,
 	}
 	self.fallAnimation = {
 		playing = false,
 		y = nil,
 		targetY = nil,
 		velocity = nil,
+		promise = nil,
 	}
 end
 
