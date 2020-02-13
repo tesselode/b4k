@@ -11,7 +11,7 @@ local basicGameRules = {
 
 function basicGameRules:init()
 	local board = self.pool:queue(Board(self.pool))
-	board:fillWithRandomTiles()
+	board:initTiles()
 
 	self.justRemovedTiles = false
 

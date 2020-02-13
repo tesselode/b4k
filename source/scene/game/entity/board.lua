@@ -44,10 +44,10 @@ function Board:new(pool, puzzleMode)
 	self.pool = pool
 	self.puzzleMode = puzzleMode
 	self:initTransform()
-	self:initTiles()
-	self.wasFree = true
 	self.squares = {}
 	self.totalSquares = 0
+	self:initTiles()
+	self.wasFree = true
 	self.queue = {}
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
@@ -192,8 +192,26 @@ function Board:rotate(x, y, counterClockwise)
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
 	self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
-	table.insert(self.queue, self.fallTiles)
-	table.insert(self.queue, self.checkAndClearSquares)
+	if self:willTilesFall() then
+		table.insert(self.queue, self.fallTiles)
+		table.insert(self.queue, self.checkAndClearSquares)
+	else
+		self:checkAndClearSquares()
+	end
+end
+
+function Board:willTilesFall()
+	for x = 0, constant.boardWidth - 1 do
+		for y = constant.boardHeight - 1, 0, -1 do
+			if not self:getTileAt(x, y) then
+				for yy = -constant.boardHeight, y - 1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then return true end
+				end
+			end
+		end
+	end
+	return false
 end
 
 function Board:fallTiles()
