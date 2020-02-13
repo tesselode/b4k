@@ -138,6 +138,16 @@ function Board:checkSquares(emitEvent)
 	return newSquares
 end
 
+-- checks for squares and clears them if there aren't any new ones
+function Board:checkAndClearSquares()
+	local numNewSquares = self:checkSquares()
+	if self.totalSquares > 0 then
+		if numNewSquares == 0 then
+			table.insert(self.queue, self.clearTiles)
+		end
+	end
+end
+
 -- changes the colors of tiles so that there's no matching squares
 function Board:scramble()
 	if #Tile.colors < 2 then return end
@@ -177,10 +187,19 @@ function Board:rotate(x, y, counterClockwise)
 	if bottomRight then bottomRight:rotate('bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate('bottomLeft', counterClockwise) end
 	self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
-	local numNewSquares = self:checkSquares()
-	if self.totalSquares > 0 then
-		if numNewSquares == 0 then
-			table.insert(self.queue, self.clearTiles)
+	table.insert(self.queue, self.fallTiles)
+	table.insert(self.queue, self.checkAndClearSquares)
+end
+
+function Board:fallTiles()
+	for x = 0, constant.boardWidth - 1 do
+		for y = constant.boardHeight - 1, 0, -1 do
+			if not self:getTileAt(x, y) then
+				for yy = -constant.boardHeight, y - 1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then tile:fall() end
+				end
+			end
 		end
 	end
 end
@@ -232,10 +251,9 @@ function Board:removeTiles()
 		end
 	end
 	self.pool:emit('onBoardRemovedTiles', self)
-	-- tell tiles above holes to fall and spawn new tiles
-	for x = 0, constant.boardWidth - 1 do
-		-- spawn new tiles
-		if not self.puzzleMode then
+	-- spawn new tiles to replace the removed ones
+	if not self.puzzleMode then
+		for x = 0, constant.boardWidth - 1 do
 			local holesInColumn = 0
 			for y = constant.boardHeight - 1, 0, -1 do
 				if not self:getTileAt(x, y) then
@@ -244,16 +262,8 @@ function Board:removeTiles()
 				end
 			end
 		end
-		-- make tiles fall
-		for y = constant.boardHeight - 1, 0, -1 do
-			if not self:getTileAt(x, y) then
-				for yy = -constant.boardHeight, y - 1 do
-					local tile = self:getTileAt(x, yy)
-					if tile then tile:fall() end
-				end
-			end
-		end
 	end
+	self:fallTiles()
 	table.insert(self.queue, self.checkSquares)
 end
 
