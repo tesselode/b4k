@@ -86,7 +86,7 @@ function Board:fillWithRandomTiles()
 			tile.color = tile.color + 1
 			if tile.color > #tile.colors then tile.color = 1 end
 		end
-		self:checkSquares()
+		squares, numSquares = self:checkSquares()
 		if numSquares < 1 then
 			break
 		else
