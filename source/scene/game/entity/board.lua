@@ -125,6 +125,20 @@ function Board:getTileAt(x, y)
 	end
 end
 
+function Board:willTilesFall()
+	for x = 0, constant.boardWidth - 1 do
+		for y = constant.boardHeight - 1, 0, -1 do
+			if not self:getTileAt(x, y) then
+				for yy = -constant.boardHeight, y - 1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then return true end
+				end
+			end
+		end
+	end
+	return false
+end
+
 -- rotates a 2x2 square of tiles with the top-left corner at (x, y)
 function Board:rotate(x, y, counterClockwise)
 	assert(x >= 0 and x <= constant.boardWidth - 2 and y >= 0 and y <= constant.boardHeight - 2,
@@ -148,9 +162,34 @@ function Board:rotate(x, y, counterClockwise)
 			table.insert(promises, bottomLeft:rotate('bottomLeft', counterClockwise))
 		end
 		self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
-		await(Promise.all(promises))
+		if self:willTilesFall() then
+			self.canRotate = false
+			await(Promise.all(promises))
+			await(self:fallTiles())
+			self.canRotate = true
+		end
 		self:checkSquares()
 	end)
+end
+
+function Board:fallTiles()
+	local promises = {}
+	for x = 0, constant.boardWidth - 1 do
+		for y = constant.boardHeight - 1, 0, -1 do
+			if self:getTileAt(x, y) then goto continue end
+			for yy = -constant.boardHeight, y - 1 do
+				local tile = self:getTileAt(x, yy)
+				if tile then
+					local promise = tile:fall()
+					if promise then
+						table.insert(promises, promise)
+					end
+				end
+			end
+			::continue::
+		end
+	end
+	return Promise.all(promises)
 end
 
 function Board:mousemoved(x, y, dx, dy, istouch)

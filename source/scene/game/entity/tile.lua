@@ -100,7 +100,36 @@ function Tile:rotate(corner, counterClockwise)
 	return promise
 end
 
+--[[
+	Tells the tile to fall one unit downward and starts
+	the falling animation if it isn't already playing.
+]]
+function Tile:fall()
+	if self.fallAnimation.playing then
+		self.fallAnimation.targetY = self.fallAnimation.targetY + 1
+	else
+		self.fallAnimation.playing = true
+		self.fallAnimation.y = self.y
+		self.fallAnimation.targetY = self.y + 1
+		self.fallAnimation.velocity = 0
+		self.fallAnimation.promise = Promise()
+		return self.fallAnimation.promise
+	end
+end
+
 function Tile:update(dt)
+	if self.fallAnimation.playing then
+		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
+		self.fallAnimation.y = self.fallAnimation.y + self.fallAnimation.velocity * dt
+		if self.fallAnimation.y >= self.fallAnimation.targetY then
+			self.y = self.fallAnimation.targetY
+			self.fallAnimation.playing = false
+			self.fallAnimation.y = nil
+			self.fallAnimation.targetY = nil
+			self.fallAnimation.velocity = nil
+			self.fallAnimation.promise:finish()
+		end
+	end
 end
 
 function Tile:getDisplayPosition()

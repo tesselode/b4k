@@ -4,10 +4,12 @@ local Promise = Object:extend()
 
 function Promise:new(f)
 	self._onFinish = {}
-	f(function(...) self:_finish(...) end)
+	if f then
+		f(function(...) self:finish(...) end)
+	end
 end
 
-function Promise:_finish(...)
+function Promise:finish(...)
 	for _, f in ipairs(self._onFinish) do
 		f(...)
 	end
