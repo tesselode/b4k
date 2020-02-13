@@ -92,6 +92,10 @@ function Board:fillWithRandomTiles()
 		else
 			steps = steps + 1
 		end
+		if steps > 20 then
+			log.warn('exceeded 20 steps, giving up on scrambling the board')
+			return
+		end
 	end
 	log.trace(('scrambled the board in %i steps'):format(steps))
 end
