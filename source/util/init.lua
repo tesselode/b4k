@@ -53,4 +53,16 @@ function util.bind(f, argument)
 	return function(...) f(argument, ...) end
 end
 
+-- async
+function util.async(f)
+	local co
+	local function await(promise)
+		promise:after(function() coroutine.resume(co) end)
+		coroutine.yield()
+	end
+	co = coroutine.create(function() f(await) end)
+	coroutine.resume(co)
+	return co
+end
+
 return util
