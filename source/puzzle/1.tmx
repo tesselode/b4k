@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.2" orientation="orthogonal" renderorder="right-down" compressionlevel="-1" width="8" height="8" tilewidth="1" tileheight="1" infinite="0" nextlayerid="2" nextobjectid="1">
+<map version="1.2" tiledversion="1.3.2" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="8" height="8" tilewidth="1" tileheight="1" infinite="0" nextlayerid="2" nextobjectid="1">
+ <properties>
+  <property name="moves" type="int" value="3"/>
+ </properties>
  <tileset firstgid="1" source="tiles.tsx"/>
  <layer id="1" name="tiles" width="8" height="8">
   <data encoding="csv">

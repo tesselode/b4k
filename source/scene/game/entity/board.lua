@@ -37,6 +37,7 @@ function Board:initTiles()
 		end
 		self:scramble()
 	end
+	self:checkSquares()
 end
 
 function Board:new(pool, puzzleMode)
@@ -51,6 +52,11 @@ function Board:new(pool, puzzleMode)
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
 	self.stencil = util.bind(self.stencil, self)
+end
+
+function Board:add(e)
+	if e ~= self then return end
+	self:checkSquares()
 end
 
 -- returns if the board is free to do the next queued action
@@ -171,7 +177,6 @@ function Board:scramble()
 		end
 	end
 	log.trace(('scrambled the board in %i steps'):format(steps))
-	self:checkSquares()
 end
 
 -- rotates a 2x2 square of tiles with the top-left corner at (x, y)
