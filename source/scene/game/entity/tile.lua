@@ -1,6 +1,7 @@
 local color = require 'color'
 local Object = require 'lib.classic'
 local Promise = require 'util.promise'
+local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 
 local Tile = Object:extend()
 
@@ -41,6 +42,7 @@ end
 
 function Tile:clear()
 	return Promise(function(finish)
+		self.pool:queue(TileClearParticles(self))
 		self.cleared = true
 		self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
 			:ease 'quartout'
