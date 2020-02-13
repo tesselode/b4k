@@ -1,4 +1,5 @@
 local constant = require 'constant'
+local log = require 'lib.log'
 local Object = require 'lib.classic'
 local Promise = require 'util.promise'
 local Tile = require 'scene.game.entity.tile'
@@ -26,18 +27,79 @@ function Board:spawnTile(x, y, color)
 	table.insert(self.tiles, Tile(self.pool, x, y, color))
 end
 
-function Board:initTiles()
-	self.tiles = {}
+-- returns if there's a 2x2 square of same-colored tiles
+-- with the top-left corner at (x, y)
+function Board:squareAt(x, y)
+	assert(x >= 0 and x <= constant.boardWidth - 2 and y >= 0 and y <= constant.boardHeight - 2,
+		'trying to detect squares out of bounds')
+	local topLeft = self:getTileAt(x, y)
+	local topRight = self:getTileAt(x + 1, y)
+	local bottomRight = self:getTileAt(x + 1, y + 1)
+	local bottomLeft = self:getTileAt(x, y + 1)
+	if not (topLeft and topRight and bottomRight and bottomLeft) then
+		return false
+	end
+	return topLeft.color == topRight.color
+		and topRight.color == bottomRight.color
+		and bottomRight.color == bottomLeft.color
+end
+
+-- checks for new matching-color squares
+function Board:checkSquares()
+	local squares = {}
+	local numSquares = 0
+	local numNewSquares = 0
+	for x = 0, constant.boardWidth - 2 do
+		for y = 0, constant.boardHeight - 2 do
+			local index = y * constant.boardWidth + x
+			if self:squareAt(x, y) then
+				squares[index] = true
+				numSquares = numSquares + 1
+				if not self.previousSquares[index] then
+					numNewSquares = numNewSquares + 1
+				end
+			end
+		end
+	end
+	self.pool:emit('onBoardCheckedSquares', self, squares, numSquares, numNewSquares)
+	self.previousSquares = squares
+	return squares, numSquares
+end
+
+function Board:fillWithRandomTiles()
 	for x = 0, constant.boardWidth - 1 do
 		for y = 0, constant.boardHeight - 1 do
 			self:spawnTile(x, y)
 		end
 	end
+	-- changes the colors of tiles so that there's no matching squares
+	if #Tile.colors < 2 then return end
+	local squares, numSquares = self:checkSquares()
+	if numSquares < 1 then return end
+	log.trace 'scrambling the board'
+	local steps = 1
+	while true do
+		log.trace(('step %i: %i squares'):format(steps, numSquares))
+		for square in pairs(squares) do
+			local x, y = util.indexToCoordinates(constant.boardWidth, square)
+			local tile = self:getTileAt(x, y)
+			tile.color = tile.color + 1
+			if tile.color > #tile.colors then tile.color = 1 end
+		end
+		self:checkSquares()
+		if numSquares < 1 then
+			break
+		else
+			steps = steps + 1
+		end
+	end
+	log.trace(('scrambled the board in %i steps'):format(steps))
 end
 
 function Board:new(pool)
 	self.pool = pool
-	self:initTiles()
+	self.tiles = {}
+	self.previousSquares = {}
 	self:initTransform()
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
@@ -85,8 +147,9 @@ function Board:rotate(x, y, counterClockwise)
 		if bottomLeft then
 			table.insert(promises, bottomLeft:rotate('bottomLeft', counterClockwise))
 		end
+		self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
 		await(Promise.all(promises))
-		print 'finished rotating tiles'
+		self:checkSquares()
 	end)
 end
 
