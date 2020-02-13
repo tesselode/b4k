@@ -15,10 +15,10 @@ function Game:enter()
 			require 'scene.game.system.timer',
 			require 'scene.game.system.layout',
 			require 'scene.game.system.square-highlights',
-			require 'scene.game.system.game-rules.puzzle',
+			require 'scene.game.system.game-rules',
 			nata.oop(),
 		},
-	}, '2')
+	})
 end
 
 function Game:update(dt)

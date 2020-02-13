@@ -1,6 +1,5 @@
 local color = require 'color'
 local Object = require 'lib.classic'
-local Promise = require 'util.promise'
 
 local Tile = Object:extend()
 
@@ -16,11 +15,12 @@ Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
 Tile.gravity = 50
 
-function Tile:new(pool, x, y, tileColor)
+function Tile:new(pool, x, y, color)
 	self.pool = pool
 	self.x = x
 	self.y = y
-	self.color = tileColor or love.math.random(1, #self.colors)
+	self.color = color or love.math.random(1, #self.colors)
+	self.cleared = false
 	self.scale = 1
 	self.rotationAnimation = {
 		playing = false,
@@ -36,9 +36,21 @@ function Tile:new(pool, x, y, tileColor)
 		targetY = nil,
 		velocity = nil,
 	}
+	self.playingClearAnimation = false
+end
+
+function Tile:isFree(toRotate)
+	if self.rotationAnimation.playing and not toRotate then return false end
+	if self.playingClearAnimation then return false end
+	if self.fallAnimation.playing then return false end
+	return true
 end
 
 function Tile:rotate(corner, counterClockwise)
+	-- cancel any running rotation animation
+	if self.rotationAnimation.tween then
+		self.rotationAnimation.tween:stop()
+	end
 	-- get the center of rotation, and while we're at it,
 	-- get the amount to change the tile's actual position
 	local centerX, centerY, deltaX, deltaY
@@ -71,36 +83,60 @@ function Tile:rotate(corner, counterClockwise)
 			deltaX, deltaY = 0, -1
 		end
 	end
-	-- cancel any running rotation animation
-	if self.rotationAnimation.tween then
-		self.rotationAnimation.tween:stop()
-	end
 	-- play the rotation animation
-	local promise = Promise(function(finish)
-		local angle = math.atan2(self.y + .5 - centerY, self.x + .5 - centerX)
-		self.rotationAnimation.playing = true
-		self.rotationAnimation.centerX = centerX
-		self.rotationAnimation.centerY = centerY
-		self.rotationAnimation.angle = angle
-		local angleIncrement = counterClockwise and -math.pi/2 or math.pi/2
-		self.rotationAnimation.tween = self.pool.data.tweens:to(
-			self.rotationAnimation,
-			self.rotationAnimationDuration,
-			{angle = angle + angleIncrement}
-		)
-			:ease 'backout'
-			:oncomplete(function()
-				self.rotationAnimation.playing = false
-				finish()
-			end)
-	end)
-	-- move the tile
+	local angle = math.atan2(self.y + .5 - centerY, self.x + .5 - centerX)
+	self.rotationAnimation.playing = true
+	self.rotationAnimation.centerX = centerX
+	self.rotationAnimation.centerY = centerY
+	self.rotationAnimation.angle = angle
+	local angleIncrement = counterClockwise and -math.pi/2 or math.pi/2
+	self.rotationAnimation.tween = self.pool.data.tweens:to(
+		self.rotationAnimation,
+		self.rotationAnimationDuration,
+		{angle = angle + angleIncrement}
+	)
+		:ease 'backout'
+		:oncomplete(function() self.rotationAnimation.playing = false end)
+	-- change the tile's actual position
 	self.x = self.x + deltaX
 	self.y = self.y + deltaY
-	return promise
+end
+
+--[[
+	Tells the tile to fall one unit downward and starts
+	the falling animation if it isn't already playing.
+]]
+function Tile:fall()
+	if self.fallAnimation.playing then
+		self.fallAnimation.targetY = self.fallAnimation.targetY + 1
+	else
+		self.fallAnimation.playing = true
+		self.fallAnimation.y = self.y
+		self.fallAnimation.targetY = self.y + 1
+		self.fallAnimation.velocity = 0
+	end
+end
+
+function Tile:clear()
+	self.cleared = true
+	self.playingClearAnimation = true
+	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
+		:ease 'quartout'
+		:oncomplete(function() self.playingClearAnimation = false end)
 end
 
 function Tile:update(dt)
+	if self.fallAnimation.playing then
+		self.fallAnimation.velocity = self.fallAnimation.velocity + self.gravity * dt
+		self.fallAnimation.y = self.fallAnimation.y + self.fallAnimation.velocity * dt
+		if self.fallAnimation.y >= self.fallAnimation.targetY then
+			self.y = self.fallAnimation.targetY
+			self.fallAnimation.playing = false
+			self.fallAnimation.y = nil
+			self.fallAnimation.targetY = nil
+			self.fallAnimation.velocity = nil
+		end
+	end
 end
 
 function Tile:getDisplayPosition()

@@ -166,9 +166,9 @@ function basicGameRules:drawChainCounter()
 end
 
 function basicGameRules:draw()
-	self:drawScore()
-	self:drawSquaresCounter()
-	self:drawChainCounter()
+	--self:drawScore()
+	--self:drawSquaresCounter()
+	--self:drawChainCounter()
 end
 
 return basicGameRules

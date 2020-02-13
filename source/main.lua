@@ -28,7 +28,7 @@ function love.load()
 			'draw',
 		},
 	}
-	stateManager:enter(require 'scene.promise-test')
+	stateManager:enter(require 'scene.game'())
 end
 
 function love.keypressed(key)
