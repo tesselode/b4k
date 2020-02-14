@@ -24,8 +24,8 @@ function Board:initTransform()
 	self.transform:translate(-constant.boardWidth / 2, -constant.boardHeight / 2)
 end
 
-function Board:spawnTile(x, y, color)
-	table.insert(self.tiles, Tile(self.pool, x, y, color))
+function Board:spawnTile(x, y, tileColor)
+	table.insert(self.tiles, Tile(self.pool, x, y, tileColor))
 end
 
 -- returns if there's a 2x2 square of same-colored tiles
