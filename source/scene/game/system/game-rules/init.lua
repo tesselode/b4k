@@ -16,6 +16,10 @@ end
 function basicGameRules:init(...)
 	self:createBoard(...)
 
+	-- global state
+	self.pool.data.gameInProgress = true
+
+	-- internal state
 	self.numSquares = 0
 	self.justRemovedTiles = false
 

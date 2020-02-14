@@ -1,3 +1,4 @@
+local color = require 'color'
 local constant = require 'constant'
 local log = require 'lib.log'
 local Object = require 'lib.classic'
@@ -111,7 +112,7 @@ function Board:new(pool, options)
 	self:initTransform()
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
-	self.canRotate = true
+	self.freeToRotate = true
 	self.stencil = util.bind(self.stencil, self)
 end
 
@@ -177,17 +178,17 @@ function Board:rotate(x, y, counterClockwise)
 		self.pool:emit('onBoardRotatingTiles', self, x, y, counterClockwise)
 		local rotateTilesPromise = Promise.all(promises)
 		if self:willTilesFall() then
-			self.canRotate = false
+			self.freeToRotate = false
 			await(rotateTilesPromise)
 			await(self:fallTiles())
-			self.canRotate = true
+			self.freeToRotate = true
 		end
 		local squares, numSquares, numNewSquares = self:checkSquares()
 		if numSquares > 0 and numNewSquares < 1 then
-			self.canRotate = false
+			self.freeToRotate = false
 			await(rotateTilesPromise)
 			await(self:clearTiles(squares))
-			self.canRotate = true
+			self.freeToRotate = true
 		end
 	end)
 end
@@ -277,6 +278,10 @@ function Board:removeTiles()
 	end)
 end
 
+function Board:canRotate()
+	return self.freeToRotate and self.pool.data.gameInProgress
+end
+
 function Board:mousemoved(x, y, dx, dy, istouch)
 	x, y = self.transform:inverseTransformPoint(x, y)
 	self.mouseInBounds = not (x < 0 or x > constant.boardWidth or y < 0 or y > constant.boardHeight)
@@ -286,7 +291,7 @@ function Board:mousemoved(x, y, dx, dy, istouch)
 end
 
 function Board:mousepressed(x, y, button, istouch, presses)
-	if self.mouseInBounds and self.canRotate then
+	if self.mouseInBounds and self:canRotate() then
 		if button == 1 then
 			self:rotate(self.cursorX, self.cursorY, true)
 		elseif button == 2 then
@@ -301,17 +306,21 @@ end
 
 function Board:drawTiles()
 	love.graphics.push 'all'
-	love.graphics.stencil(self.stencil)
+	love.graphics.stencil(self.stencil, 'increment', 1, true)
 	love.graphics.setStencilTest('greater', 0)
 	for _, tile in ipairs(self.tiles) do
 		tile:draw()
 	end
+	love.graphics.stencil(self.stencil, 'decrement', 1, true)
 	love.graphics.pop()
 end
 
 function Board:drawCursor()
 	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
+	if not self:canRotate() then
+		love.graphics.setColor(color.silver)
+	end
 	love.graphics.setLineWidth(self.cursorLineWidth)
 	love.graphics.rectangle('line', self.cursorX, self.cursorY, 2, 2)
 	love.graphics.pop()
