@@ -1,4 +1,5 @@
 local Board = require 'scene.game.entity.board'
+local ChainPopup = require 'scene.game.entity.chain-popup'
 local constant = require 'constant'
 local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
@@ -38,12 +39,14 @@ function basicGameRules:onBoardRemovedTiles(board)
 end
 
 function basicGameRules:onBoardCheckedSquares(board, squares, numSquares, numNewSquares)
+	if not self.pool.data.gameInProgress then return end
 	self.numSquares = numSquares
 	if numSquares < 1 then
 		self.chain = 1
 	elseif self.justRemovedTiles then
 		self.chain = self.chain + 1
 		self:playChainTextPulseAnimation()
+		self:createChainPopup(board, squares, numSquares)
 	end
 	self.justRemovedTiles = false
 	if numNewSquares > 0 then
@@ -93,6 +96,20 @@ function basicGameRules:playChainTextPulseAnimation()
 	end
 	self.hudChainTextScale = 1.25
 	self.hudChainTextScaleTween = self.pool.data.tweens:to(self, .3, {hudChainTextScale = 1})
+end
+
+function basicGameRules:createChainPopup(board, squares, numSquares)
+	local sumX, sumY = 0, 0
+	for square in pairs(squares) do
+		local x, y = util.indexToCoordinates(constant.boardWidth, square)
+		sumX = sumX + x + 1
+		sumY = sumY + y + 1
+	end
+	local chainPopupX, chainPopupY = board.transform:transformPoint(
+		sumX / numSquares,
+		sumY / numSquares
+	)
+	self.pool:queue(ChainPopup(self.pool, chainPopupX, chainPopupY))
 end
 
 function basicGameRules:updateRollingScore(dt)
