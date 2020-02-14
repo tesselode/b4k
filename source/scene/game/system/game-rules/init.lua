@@ -9,9 +9,12 @@ local basicGameRules = {
 	rollingScoreRoundUpThreshold = .4,
 }
 
-function basicGameRules:init()
-	local board = self.pool:queue(Board(self.pool))
-	board:fillWithRandomTiles()
+function basicGameRules:createBoard(...)
+	self.pool:queue(Board(self.pool))
+end
+
+function basicGameRules:init(...)
+	self:createBoard(...)
 
 	self.numSquares = 0
 	self.justRemovedTiles = false

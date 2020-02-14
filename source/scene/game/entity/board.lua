@@ -100,10 +100,14 @@ function Board:fillWithRandomTiles()
 	log.trace(('scrambled the board in %i steps'):format(steps))
 end
 
-function Board:new(pool)
+function Board:new(pool, options)
 	self.pool = pool
+	self.options = options or {}
 	self.tiles = {}
 	self.previousSquares = {}
+	if self.options.fillWithRandomTiles ~= false then
+		self:fillWithRandomTiles()
+	end
 	self:initTransform()
 	self.mouseInBounds = false
 	self.cursorX, self.cursorY = 0, 0
@@ -255,13 +259,13 @@ function Board:removeTiles()
 			end
 			self.pool:emit('onBoardRemovedTiles', self)
 			-- spawn new tiles to replace the removed ones
-			if not self.puzzleMode then
+			if self.options.spawnNewTiles ~= false then
 				for x = 0, constant.boardWidth - 1 do
 					local holesInColumn = 0
 					for y = constant.boardHeight - 1, 0, -1 do
 						if not self:getTileAt(x, y) then
 							holesInColumn = holesInColumn + 1
-							--self:spawnTile(x, -holesInColumn)
+							self:spawnTile(x, -holesInColumn)
 						end
 					end
 				end
