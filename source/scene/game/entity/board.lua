@@ -111,6 +111,11 @@ function Board:new(pool)
 	self.stencil = util.bind(self.stencil, self)
 end
 
+function Board:add(e)
+	if e ~= self then return end
+	self:checkSquares()
+end
+
 function Board:updateTiles(dt)
 	for _, tile in ipairs(self.tiles) do
 		tile:update(dt)
@@ -256,7 +261,7 @@ function Board:removeTiles()
 					for y = constant.boardHeight - 1, 0, -1 do
 						if not self:getTileAt(x, y) then
 							holesInColumn = holesInColumn + 1
-							self:spawnTile(x, -holesInColumn)
+							--self:spawnTile(x, -holesInColumn)
 						end
 					end
 				end

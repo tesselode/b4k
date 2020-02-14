@@ -11,6 +11,7 @@ function puzzle:init(puzzleName)
 		board:spawnTile(x, y, color)
 	end
 
+	self.numSquares = 0
 	self.justRemovedTiles = false
 
 	-- scoring
