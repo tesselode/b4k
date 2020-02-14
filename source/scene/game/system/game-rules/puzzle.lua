@@ -15,4 +15,9 @@ function puzzle:createBoard(puzzleName)
 	end
 end
 
+-- don't track score or show score popups
+function puzzle:onBoardClearingTiles() end
+
+function puzzle:draw() end
+
 return puzzle
