@@ -1,10 +1,10 @@
+local Bloom = require 'shader.bloom'
 local constant = require 'constant'
 local stateManager = require 'state-manager'
 
 local debugFont = love.graphics.newFont(64)
 
 local mainTransform = love.math.newTransform()
-
 local function initMainTransform()
 	mainTransform:reset()
 	local scale = math.min(love.graphics.getWidth() / constant.screenWidth,
@@ -16,8 +16,9 @@ local function initMainTransform()
 		constant.screenWidth / 2, constant.screenHeight / 2
 	)
 end
-
 initMainTransform()
+
+local bloom = Bloom()
 
 function love.load()
 	stateManager:hook {
@@ -56,14 +57,17 @@ end
 
 function love.resize(w, h)
 	initMainTransform()
+	bloom:resize()
 end
 
 function love.draw()
+	bloom:push()
 	love.graphics.push 'all'
 	love.graphics.setFont(debugFont)
 	love.graphics.applyTransform(mainTransform)
 	stateManager:emit 'draw'
 	love.graphics.pop()
+	bloom:pop()
 
 	love.graphics.print(string.format('Memory usage: %ikb', collectgarbage 'count'))
 end
