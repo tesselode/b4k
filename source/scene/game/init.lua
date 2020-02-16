@@ -18,7 +18,7 @@ function Game:enter()
 			require 'scene.game.system.game-rules.puzzle',
 			nata.oop(),
 		},
-	}, '7')
+	}, '2')
 end
 
 function Game:update(dt)

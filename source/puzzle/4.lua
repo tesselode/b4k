@@ -23,7 +23,7 @@ return {
       columns = 4,
       image = "tiles.png",
       imagewidth = 4,
-      imageheight = 1,
+      imageheight = 2,
       tileoffset = {
         x = 0,
         y = 0
@@ -35,8 +35,39 @@ return {
       },
       properties = {},
       terrains = {},
-      tilecount = 4,
-      tiles = {}
+      tilecount = 8,
+      tiles = {
+        {
+          id = 0,
+          properties = {
+            ["color"] = 1
+          }
+        },
+        {
+          id = 1,
+          properties = {
+            ["color"] = 2
+          }
+        },
+        {
+          id = 2,
+          properties = {
+            ["color"] = 3
+          }
+        },
+        {
+          id = 3,
+          properties = {
+            ["color"] = 4
+          }
+        },
+        {
+          id = 4,
+          properties = {
+            ["color"] = "grey"
+          }
+        }
+      }
     }
   },
   layers = {
