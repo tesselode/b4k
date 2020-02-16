@@ -43,6 +43,7 @@ function Board:squareAt(x, y)
 	return topLeft.color == topRight.color
 		and topRight.color == bottomRight.color
 		and bottomRight.color == bottomLeft.color
+		and topLeft.color ~= 'grey'
 end
 
 -- checks for new matching-color squares

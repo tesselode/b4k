@@ -159,7 +159,11 @@ end
 
 function Tile:draw()
 	love.graphics.push 'all'
-	love.graphics.setColor(self.colors[self.color])
+	if self.color == 'grey' then
+		love.graphics.setColor(color.maroon)
+	else
+		love.graphics.setColor(self.colors[self.color])
+	end
 	local x, y = self:getDisplayPosition()
 	love.graphics.rectangle(
 		'fill',

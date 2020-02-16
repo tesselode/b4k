@@ -10,8 +10,8 @@ function puzzle:createBoard(puzzleName)
 		fillWithRandomTiles = false,
 		spawnNewTiles = false,
 	}))
-	for _, color, x, y in map.layers.tiles:getTiles() do
-		board:spawnTile(x, y, color)
+	for _, gid, x, y in map.layers.tiles:getTiles() do
+		board:spawnTile(x, y, map:getTileProperty(gid, 'color'))
 	end
 end
 
