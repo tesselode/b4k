@@ -1,4 +1,5 @@
 local color = require 'color'
+local Grid = require 'grid'
 local Object = require 'lib.classic'
 local Tile = require 'scene.game.tile'
 local util = require 'util'
@@ -16,6 +17,8 @@ function Board:initTiles()
 			table.insert(self.tiles, Tile(x, y))
 		end
 	end
+	self.previousSquares = Grid(self.width, self.height)
+	self.squares = Grid(self.width, self.height)
 end
 
 function Board:initTransform()
@@ -48,6 +51,37 @@ function Board:getTileAt(x, y)
 	end
 end
 
+function Board:getSquareAt(x, y)
+	local topLeft = self:getTileAt(x, y)
+	local topRight = self:getTileAt(x + 1, y)
+	local bottomRight = self:getTileAt(x + 1, y + 1)
+	local bottomLeft = self:getTileAt(x, y + 1)
+	if not (topLeft and topRight and bottomRight and bottomLeft) then
+		return
+	end
+	local sameColor = topLeft.color == topRight.color
+		and topRight.color == bottomRight.color
+		and bottomRight.color == bottomLeft.color
+	if sameColor then
+		return {
+			color = topLeft.color,
+		}
+	end
+end
+
+function Board:checkSquares()
+	self.previousSquares = self.squares
+	self.squares = Grid(self.width, self.height)
+	for x = 0, self.width - 2 do
+		for y = 0, self.height - 2 do
+			local square = self:getSquareAt(x, y)
+			if square then
+				self.squares:set(x, y, square)
+			end
+		end
+	end
+end
+
 function Board:rotate(x, y, counterClockwise)
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -57,6 +91,7 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate(x + 1, y + 1, 'topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate(x + 1, y + 1, 'bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate(x + 1, y + 1, 'bottomLeft', counterClockwise) end
+	self:checkSquares()
 end
 
 function Board:update(dt)
@@ -86,6 +121,16 @@ function Board:drawTiles()
 	end
 end
 
+function Board:drawSquareHighlights()
+	love.graphics.push 'all'
+	love.graphics.setColor(color.white)
+	love.graphics.setLineWidth(1/8)
+	for _, x, y in self.squares:items() do
+		love.graphics.rectangle('line', x, y, 2, 2)
+	end
+	love.graphics.pop()
+end
+
 function Board:drawCursor()
 	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
@@ -99,6 +144,7 @@ function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
+	self:drawSquareHighlights()
 	self:drawCursor()
 	love.graphics.pop()
 end
