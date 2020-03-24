@@ -103,6 +103,11 @@ function Board:checkSquares()
 		end
 	end
 	self.pool:emit('onCheckSquares', self.squares)
+	return numNewSquares
+end
+
+function Board:checkNewSquares()
+	local numNewSquares = self:checkSquares()
 	if self.squares:count() > 0 and numNewSquares < 1 then
 		table.insert(self.queue, self.clearTiles)
 	end
@@ -188,9 +193,9 @@ function Board:rotate(x, y, counterClockwise)
 	if bottomLeft then bottomLeft:rotate(x + 1, y + 1, 'bottomLeft', counterClockwise) end
 	if self:willTilesFall() then
 		table.insert(self.queue, self.fallTiles)
-		table.insert(self.queue, self.checkSquares)
+		table.insert(self.queue, self.checkNewSquares)
 	else
-		self:checkSquares()
+		self:checkNewSquares()
 	end
 end
 
