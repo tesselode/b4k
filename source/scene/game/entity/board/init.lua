@@ -108,16 +108,23 @@ function Board:checkSquares()
 end
 
 function Board:clearTiles()
-	local shouldClear = {}
+	local tiles = {}
 	for _, x, y in self.squares:items() do
-		shouldClear[self:getTileAt(x, y)] = true
-		shouldClear[self:getTileAt(x + 1, y)] = true
-		shouldClear[self:getTileAt(x + 1, y + 1)] = true
-		shouldClear[self:getTileAt(x, y + 1)] = true
+		tiles[self:getTileAt(x, y)] = true
+		tiles[self:getTileAt(x + 1, y)] = true
+		tiles[self:getTileAt(x + 1, y + 1)] = true
+		tiles[self:getTileAt(x, y + 1)] = true
 	end
+	for tile in pairs(tiles) do
+		tile:clear()
+	end
+	table.insert(self.queue, self.removeTiles)
+end
+
+function Board:removeTiles()
 	for i = #self.tiles, 1, -1 do
 		local tile = self.tiles[i]
-		if shouldClear[tile] then
+		if tile.state == 'cleared' then
 			table.remove(self.tiles, i)
 		end
 	end

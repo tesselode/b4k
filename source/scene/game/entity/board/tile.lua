@@ -10,6 +10,7 @@ Tile.colors = {
 	color.yellow,
 }
 Tile.rotationAnimationDuration = 1/3
+Tile.clearAnimationDuration = .4
 
 function Tile:new(pool, x, y, tileColor)
 	self.pool = pool
@@ -23,10 +24,11 @@ function Tile:new(pool, x, y, tileColor)
 		centerX = nil,
 		centerY = nil,
 	}
+	self.scale = 1
 end
 
 function Tile:isIdle()
-	return self.state == 'idle'
+	return self.state == 'idle' or self.state == 'cleared'
 end
 
 function Tile:rotate(centerX, centerY, orientation, counterClockwise)
@@ -55,6 +57,13 @@ function Tile:rotate(centerX, centerY, orientation, counterClockwise)
 	self.y = self.y + dy
 end
 
+function Tile:clear()
+	self.state = 'clearing'
+	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
+		:ease 'quartout'
+		:oncomplete(function() self.state = 'cleared' end)
+end
+
 function Tile:update(dt) end
 
 function Tile:getDisplayPosition()
@@ -71,7 +80,9 @@ function Tile:draw()
 	love.graphics.push 'all'
 	love.graphics.setColor(self.colors[self.color])
 	local x, y = self:getDisplayPosition()
-	love.graphics.rectangle('fill', x, y, 1, 1)
+	love.graphics.translate(x + .5, y + .5)
+	love.graphics.scale(self.scale)
+	love.graphics.rectangle('fill', -.5, -.5, 1, 1)
 	love.graphics.pop()
 end
 
