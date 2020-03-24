@@ -10,11 +10,15 @@ Board.width = 8
 Board.height = 8
 Board.baseScale = 2/3
 
+function Board:spawnTile(x, y, tileColor)
+	table.insert(self.tiles, Tile(self.pool, x, y, tileColor))
+end
+
 function Board:initTiles()
 	self.tiles = {}
 	for x = 0, self.width - 1 do
 		for y = 0, self.height - 1 do
-			table.insert(self.tiles, Tile(x, y))
+			self:spawnTile(x, y)
 		end
 	end
 	self.squares = Grid(self.width, self.height)

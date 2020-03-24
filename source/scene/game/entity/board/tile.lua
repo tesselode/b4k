@@ -1,5 +1,4 @@
 local color = require 'color'
-local flux = require 'lib.flux'
 local Object = require 'lib.classic'
 
 local Tile = Object:extend()
@@ -12,12 +11,12 @@ Tile.colors = {
 }
 Tile.rotationAnimationDuration = 1/3
 
-function Tile:new(x, y, tileColor)
+function Tile:new(pool, x, y, tileColor)
+	self.pool = pool
 	self.x = x
 	self.y = y
 	self.color = tileColor or love.math.random(#self.colors)
 	self.state = 'idle'
-	self.tweens = flux.group()
 	self.rotationAnimation = {
 		tween = nil,
 		angle = nil,
@@ -28,10 +27,6 @@ end
 
 function Tile:isIdle()
 	return self.state == 'idle'
-end
-
-function Tile:update(dt)
-	self.tweens:update(dt)
 end
 
 function Tile:rotate(centerX, centerY, orientation, counterClockwise)
@@ -53,12 +48,14 @@ function Tile:rotate(centerX, centerY, orientation, counterClockwise)
 	animation.centerX, animation.centerY = centerX, centerY
 	animation.angle = math.atan2(self.y + .5 - centerY, self.x + .5 - centerX)
 	local endAngle = animation.angle + (counterClockwise and -math.pi/2 or math.pi/2)
-	animation.tween = self.tweens:to(animation, self.rotationAnimationDuration, {angle = endAngle})
+	animation.tween = self.pool.data.tweens:to(animation, self.rotationAnimationDuration, {angle = endAngle})
 		:ease 'backout'
 		:oncomplete(function() self.state = 'idle' end)
 	self.x = self.x + dx
 	self.y = self.y + dy
 end
+
+function Tile:update(dt) end
 
 function Tile:getDisplayPosition()
 	if self.state == 'rotating' then
