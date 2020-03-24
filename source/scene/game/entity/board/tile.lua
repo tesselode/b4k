@@ -62,6 +62,8 @@ function Tile:rotate(centerX, centerY, orientation, counterClockwise)
 	self.y = self.y + dy
 end
 
+-- tells the tile to fall 1 unit. enters the falling state and
+-- starts the falling animation if it isn't already running
 function Tile:fall()
 	local previousY = self.y
 	self.y = self.y + 1

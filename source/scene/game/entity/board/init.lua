@@ -14,6 +14,8 @@ function Board:spawnTile(x, y, tileColor)
 	table.insert(self.tiles, Tile(self.pool, x, y, tileColor))
 end
 
+-- creates the data structures for tiles and squares
+-- and fills the board with random tiles
 function Board:initTiles()
 	self.tiles = {}
 	for x = 0, self.width - 1 do
@@ -24,6 +26,8 @@ function Board:initTiles()
 	self.squares = Grid(self.width, self.height)
 end
 
+-- inits the transform object used for drawing and
+-- converting mouse coordinates from screen space to grid space
 function Board:initTransform()
 	local scale = math.min(love.graphics.getWidth() / self.width,
 		love.graphics.getHeight() / self.height) * self.baseScale
@@ -49,11 +53,14 @@ function Board:new(pool)
 	self.stencil = util.bind(self.stencil, self)
 end
 
+-- check squares when the board is added to the pool
 function Board:add(e)
 	if e ~= self then return end
 	self:checkSquares()
 end
 
+-- returns true if there are no blocking animations playing
+-- (like tiles falling, rotating, etc.)
 function Board:isIdle()
 	for _, tile in ipairs(self.tiles) do
 		if not tile:isIdle() then return false end
@@ -69,6 +76,8 @@ function Board:getTileAt(x, y)
 	end
 end
 
+-- returns info about a matching color square with the top-left
+-- at (x, y), or nil if there's no square there
 function Board:getSquareAt(x, y)
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
@@ -87,6 +96,7 @@ function Board:getSquareAt(x, y)
 	end
 end
 
+-- checks for matching color squares anywhere on the board
 function Board:checkSquares()
 	local previousSquares = self.squares
 	self.squares = Grid(self.width, self.height)
@@ -106,6 +116,9 @@ function Board:checkSquares()
 	return numNewSquares
 end
 
+-- checks for matching color squares. if there aren't any new
+-- ones compared to the last check, clears the tiles in the
+-- current squares
 function Board:checkNewSquares()
 	local numNewSquares = self:checkSquares()
 	if self.squares:count() > 0 and numNewSquares < 1 then
@@ -140,6 +153,8 @@ function Board:fallTiles()
 	end
 end
 
+-- plays the clear animation on any tiles that are in a
+-- matching color square
 function Board:clearTiles()
 	local tiles = {}
 	for _, x, y in self.squares:items() do
@@ -155,6 +170,8 @@ function Board:clearTiles()
 	table.insert(self.queue, self.removeTiles)
 end
 
+-- spawns new tiles to fill the holes left by previously
+-- removed tiles
 function Board:replenishTiles()
 	for x = 0, self.width - 1 do
 		local holes = 0
@@ -169,6 +186,7 @@ function Board:replenishTiles()
 	end
 end
 
+-- removes cleared tiles from the tiles list
 function Board:removeTiles()
 	for i = #self.tiles, 1, -1 do
 		local tile = self.tiles[i]
@@ -181,6 +199,7 @@ function Board:removeTiles()
 	table.insert(self.queue, self.checkSquares)
 end
 
+-- rotates a 2x2 square of tiles
 function Board:rotate(x, y, counterClockwise)
 	if #self.queue > 0 then return end
 	local topLeft = self:getTileAt(x, y)
