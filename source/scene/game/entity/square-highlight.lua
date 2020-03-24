@@ -23,6 +23,13 @@ function SquareHighlight:onCheckSquares(squares)
 	self.active = squareAtOwnPosition
 end
 
+function SquareHighlight:onClearTiles()
+	if self.active then
+		self.active = false
+		self.pool.data.tweens:to(self, 1/3, {alpha = 0, scale = 1.5})
+	end
+end
+
 function SquareHighlight:drawOnBoard()
 	love.graphics.push 'all'
 	love.graphics.setColor(color.withAlpha(color.white, self.alpha))
