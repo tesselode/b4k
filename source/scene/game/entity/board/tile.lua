@@ -11,6 +11,7 @@ Tile.colors = {
 }
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
+Tile.gravity = 50
 
 function Tile:new(pool, x, y, tileColor)
 	self.pool = pool
@@ -23,6 +24,10 @@ function Tile:new(pool, x, y, tileColor)
 		angle = nil,
 		centerX = nil,
 		centerY = nil,
+	}
+	self.fallAnimation = {
+		y = nil,
+		vy = nil,
 	}
 	self.scale = 1
 end
@@ -57,6 +62,16 @@ function Tile:rotate(centerX, centerY, orientation, counterClockwise)
 	self.y = self.y + dy
 end
 
+function Tile:fall()
+	local previousY = self.y
+	self.y = self.y + 1
+	if self.state ~= 'falling' then
+		self.state = 'falling'
+		self.fallAnimation.y = previousY
+		self.fallAnimation.vy = 0
+	end
+end
+
 function Tile:clear()
 	self.state = 'clearing'
 	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
@@ -64,7 +79,16 @@ function Tile:clear()
 		:oncomplete(function() self.state = 'cleared' end)
 end
 
-function Tile:update(dt) end
+function Tile:update(dt)
+	if self.state == 'falling' then
+		local animation = self.fallAnimation
+		animation.vy = animation.vy + self.gravity * dt
+		animation.y = animation.y + animation.vy * dt
+		if animation.y >= self.y then
+			self.state = 'idle'
+		end
+	end
+end
 
 function Tile:getDisplayPosition()
 	if self.state == 'rotating' then
@@ -72,6 +96,9 @@ function Tile:getDisplayPosition()
 		local distance = math.sqrt(.5)
 		return animation.centerX + distance * math.cos(animation.angle) - .5,
 			animation.centerY + distance * math.sin(animation.angle) - .5
+	end
+	if self.state == 'falling' then
+		return self.x, self.fallAnimation.y
 	end
 	return self.x, self.y
 end

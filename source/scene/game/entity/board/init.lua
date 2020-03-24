@@ -107,6 +107,33 @@ function Board:checkSquares()
 	end
 end
 
+function Board:willTilesFall()
+	for x = 0, self.width - 1 do
+		for y = 0, self.height - 1 do
+			if not self:getTileAt(x, y) then
+				for yy = y - 1, 0, -1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then return true end
+				end
+			end
+		end
+	end
+	return false
+end
+
+function Board:fallTiles()
+	for x = 0, self.width - 1 do
+		for y = 0, self.height - 1 do
+			if not self:getTileAt(x, y) then
+				for yy = y - 1, 0, -1 do
+					local tile = self:getTileAt(x, yy)
+					if tile then tile:fall() end
+				end
+			end
+		end
+	end
+end
+
 function Board:clearTiles()
 	local tiles = {}
 	for _, x, y in self.squares:items() do
@@ -128,6 +155,8 @@ function Board:removeTiles()
 			table.remove(self.tiles, i)
 		end
 	end
+	self:fallTiles()
+	table.insert(self.queue, self.checkSquares)
 end
 
 function Board:rotate(x, y, counterClockwise)
@@ -140,7 +169,12 @@ function Board:rotate(x, y, counterClockwise)
 	if topRight then topRight:rotate(x + 1, y + 1, 'topRight', counterClockwise) end
 	if bottomRight then bottomRight:rotate(x + 1, y + 1, 'bottomRight', counterClockwise) end
 	if bottomLeft then bottomLeft:rotate(x + 1, y + 1, 'bottomLeft', counterClockwise) end
-	self:checkSquares()
+	if self:willTilesFall() then
+		table.insert(self.queue, self.fallTiles)
+		table.insert(self.queue, self.checkSquares)
+	else
+		self:checkSquares()
+	end
 end
 
 function Board:update(dt)
