@@ -46,6 +46,7 @@ function Board:new(pool)
 	self:initTransform()
 	self:initCursor()
 	self.queue = {}
+	self.stencil = util.bind(self.stencil, self)
 end
 
 function Board:add(e)
@@ -217,10 +218,18 @@ function Board:mousepressed(x, y, button, isTouch, presses)
 	if button == 2 then self:rotate(self.cursorX, self.cursorY) end
 end
 
+function Board:stencil()
+	love.graphics.rectangle('fill', 0, 0, self.width, self.height)
+end
+
 function Board:drawTiles()
+	love.graphics.push 'all'
+	love.graphics.setStencilTest('gequal', 1)
+	love.graphics.stencil(self.stencil, 'increment', 1, true)
 	for _, tile in ipairs(self.tiles) do
 		tile:draw()
 	end
+	love.graphics.pop()
 end
 
 function Board:drawCursor()

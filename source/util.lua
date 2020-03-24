@@ -12,4 +12,8 @@ function util.indexToCoordinates(index, width)
 	return index % width, math.floor(index / width)
 end
 
+function util.bind(f, argument)
+	return function(...) f(argument, ...) end
+end
+
 return util
