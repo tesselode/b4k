@@ -17,6 +17,7 @@ function Board:initTiles()
 			table.insert(self.tiles, Tile(x, y))
 		end
 	end
+	self.squares = Grid(self.width, self.height)
 end
 
 function Board:initTransform()
@@ -74,16 +75,40 @@ function Board:getSquareAt(x, y)
 end
 
 function Board:checkSquares()
-	local squares = Grid(self.width, self.height)
+	local previousSquares = self.squares
+	self.squares = Grid(self.width, self.height)
+	local numNewSquares = 0
 	for x = 0, self.width - 2 do
 		for y = 0, self.height - 2 do
 			local square = self:getSquareAt(x, y)
 			if square then
-				squares:set(x, y, square)
+				self.squares:set(x, y, square)
+				if not previousSquares:get(x, y) then
+					numNewSquares = numNewSquares + 1
+				end
 			end
 		end
 	end
-	self.pool:emit('onCheckSquares', squares)
+	self.pool:emit('onCheckSquares', self.squares)
+	if self.squares:count() > 0 and numNewSquares < 1 then
+		self:clearTiles()
+	end
+end
+
+function Board:clearTiles()
+	local shouldClear = {}
+	for _, x, y in self.squares:items() do
+		shouldClear[self:getTileAt(x, y)] = true
+		shouldClear[self:getTileAt(x + 1, y)] = true
+		shouldClear[self:getTileAt(x + 1, y + 1)] = true
+		shouldClear[self:getTileAt(x, y + 1)] = true
+	end
+	for i = #self.tiles, 1, -1 do
+		local tile = self.tiles[i]
+		if shouldClear[tile] then
+			table.remove(self.tiles, i)
+		end
+	end
 end
 
 function Board:rotate(x, y, counterClockwise)

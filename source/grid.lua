@@ -41,4 +41,12 @@ function Grid:items()
 	return self._iter, self, -1
 end
 
+function Grid:count()
+	local count = 0
+	for _ in self:items() do
+		count = count + 1
+	end
+	return count
+end
+
 return Grid
