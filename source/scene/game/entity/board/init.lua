@@ -1,7 +1,7 @@
 local color = require 'color'
 local Grid = require 'grid'
 local Object = require 'lib.classic'
-local Tile = require 'scene.game.tile'
+local Tile = require 'scene.game.entity.board.tile'
 local util = require 'util'
 
 local Board = Object:extend()
@@ -17,8 +17,6 @@ function Board:initTiles()
 			table.insert(self.tiles, Tile(x, y))
 		end
 	end
-	self.previousSquares = Grid(self.width, self.height)
-	self.squares = Grid(self.width, self.height)
 end
 
 function Board:initTransform()
@@ -37,10 +35,16 @@ function Board:initCursor()
 	self.mouseInBounds = false
 end
 
-function Board:new()
+function Board:new(pool)
+	self.pool = pool
 	self:initTiles()
 	self:initTransform()
 	self:initCursor()
+end
+
+function Board:add(e)
+	if e ~= self then return end
+	self:checkSquares()
 end
 
 function Board:getTileAt(x, y)
@@ -70,16 +74,16 @@ function Board:getSquareAt(x, y)
 end
 
 function Board:checkSquares()
-	self.previousSquares = self.squares
-	self.squares = Grid(self.width, self.height)
+	local squares = Grid(self.width, self.height)
 	for x = 0, self.width - 2 do
 		for y = 0, self.height - 2 do
 			local square = self:getSquareAt(x, y)
 			if square then
-				self.squares:set(x, y, square)
+				squares:set(x, y, square)
 			end
 		end
 	end
+	self.pool:emit('onCheckSquares', squares)
 end
 
 function Board:rotate(x, y, counterClockwise)
@@ -121,16 +125,6 @@ function Board:drawTiles()
 	end
 end
 
-function Board:drawSquareHighlights()
-	love.graphics.push 'all'
-	love.graphics.setColor(color.white)
-	love.graphics.setLineWidth(1/8)
-	for _, x, y in self.squares:items() do
-		love.graphics.rectangle('line', x, y, 2, 2)
-	end
-	love.graphics.pop()
-end
-
 function Board:drawCursor()
 	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
@@ -144,7 +138,7 @@ function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
-	self:drawSquareHighlights()
+	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
 	love.graphics.pop()
 end
