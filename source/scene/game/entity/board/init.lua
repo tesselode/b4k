@@ -109,9 +109,9 @@ end
 
 function Board:willTilesFall()
 	for x = 0, self.width - 1 do
-		for y = 0, self.height - 1 do
+		for y = -self.height, self.height - 1 do
 			if not self:getTileAt(x, y) then
-				for yy = y - 1, 0, -1 do
+				for yy = y - 1, -self.height, -1 do
 					local tile = self:getTileAt(x, yy)
 					if tile then return true end
 				end
@@ -123,9 +123,9 @@ end
 
 function Board:fallTiles()
 	for x = 0, self.width - 1 do
-		for y = 0, self.height - 1 do
+		for y = -self.height, self.height - 1 do
 			if not self:getTileAt(x, y) then
-				for yy = y - 1, 0, -1 do
+				for yy = y - 1, -self.height, -1 do
 					local tile = self:getTileAt(x, yy)
 					if tile then tile:fall() end
 				end
@@ -148,6 +148,20 @@ function Board:clearTiles()
 	table.insert(self.queue, self.removeTiles)
 end
 
+function Board:replenishTiles()
+	for x = 0, self.width - 1 do
+		local holes = 0
+		for y = 0, self.height - 1 do
+			if not self:getTileAt(x, y) then
+				holes = holes + 1
+			end
+		end
+		for i = 1, holes do
+			self:spawnTile(x, -i)
+		end
+	end
+end
+
 function Board:removeTiles()
 	for i = #self.tiles, 1, -1 do
 		local tile = self.tiles[i]
@@ -155,6 +169,7 @@ function Board:removeTiles()
 			table.remove(self.tiles, i)
 		end
 	end
+	self:replenishTiles()
 	self:fallTiles()
 	table.insert(self.queue, self.checkSquares)
 end
