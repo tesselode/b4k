@@ -26,6 +26,10 @@ function Tile:new(x, y, tileColor)
 	}
 end
 
+function Tile:isIdle()
+	return self.state == 'idle'
+end
+
 function Tile:update(dt)
 	self.tweens:update(dt)
 end

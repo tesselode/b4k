@@ -41,11 +41,19 @@ function Board:new(pool)
 	self:initTiles()
 	self:initTransform()
 	self:initCursor()
+	self.queue = {}
 end
 
 function Board:add(e)
 	if e ~= self then return end
 	self:checkSquares()
+end
+
+function Board:isIdle()
+	for _, tile in ipairs(self.tiles) do
+		if not tile:isIdle() then return false end
+	end
+	return true
 end
 
 function Board:getTileAt(x, y)
@@ -91,7 +99,7 @@ function Board:checkSquares()
 	end
 	self.pool:emit('onCheckSquares', self.squares)
 	if self.squares:count() > 0 and numNewSquares < 1 then
-		self:clearTiles()
+		table.insert(self.queue, self.clearTiles)
 	end
 end
 
@@ -112,6 +120,7 @@ function Board:clearTiles()
 end
 
 function Board:rotate(x, y, counterClockwise)
+	if #self.queue > 0 then return end
 	local topLeft = self:getTileAt(x, y)
 	local topRight = self:getTileAt(x + 1, y)
 	local bottomRight = self:getTileAt(x + 1, y + 1)
@@ -126,6 +135,10 @@ end
 function Board:update(dt)
 	for _, tile in ipairs(self.tiles) do
 		tile:update(dt)
+	end
+	while #self.queue > 0 and self:isIdle() do
+		self.queue[1](self)
+		table.remove(self.queue, 1)
 	end
 end
 
