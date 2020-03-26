@@ -7,11 +7,18 @@ local function shouldRemove(e) return e.removeFromPool end
 
 local Game = Object:extend()
 
-function Game:enter()
+function Game:getRulesSystem(options)
+	if options.mode == 'timeAttack' then
+		return require 'scene.game.system.rules.time-attack'
+	end
+end
+
+function Game:enter(previous, options)
 	self.pool = nata.new {
+		data = {options = options},
 		systems = {
 			require 'scene.game.system.timer',
-			self.gameRulesSystem,
+			self:getRulesSystem(options),
 			nata.oop(),
 		},
 	}

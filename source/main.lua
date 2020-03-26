@@ -1,5 +1,5 @@
 local constant = require 'constant'
-local TimeAttack = require 'scene.game.time-attack'
+local Game = require 'scene.game'
 local sceneManager = require 'scene-manager'
 
 local debugFont = love.graphics.newFont(48)
@@ -28,7 +28,7 @@ function love.load()
 			'draw',
 		},
 	}
-	sceneManager:enter(TimeAttack)
+	sceneManager:enter(Game, {mode = 'timeAttack'})
 end
 
 function love.keypressed(key)
