@@ -12,7 +12,7 @@ function SquareHighlight:new(pool, x, y)
 	self.alpha = 0
 end
 
-function SquareHighlight:onCheckSquares(squares)
+function SquareHighlight:onCheckSquares(board, squares)
 	local squareAtOwnPosition = squares:get(self.x, self.y) and true or false
 	if squareAtOwnPosition and not self.active then
 		self.scale = 1.5

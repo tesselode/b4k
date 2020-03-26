@@ -113,7 +113,7 @@ function Board:checkSquares()
 			end
 		end
 	end
-	self.pool:emit('onCheckSquares', self.squares)
+	self.pool:emit('onCheckSquares', self, self.squares)
 	return numNewSquares
 end
 
@@ -158,6 +158,7 @@ end
 -- matching color square
 function Board:clearTiles()
 	local tiles = {}
+	local numTiles = 0
 	for _, x, y in self.squares:items() do
 		tiles[self:getTileAt(x, y)] = true
 		tiles[self:getTileAt(x + 1, y)] = true
@@ -165,9 +166,10 @@ function Board:clearTiles()
 		tiles[self:getTileAt(x, y + 1)] = true
 	end
 	for tile in pairs(tiles) do
+		numTiles = numTiles + 1
 		tile:clear()
 	end
-	self.pool:emit('onClearTiles', self.squares, tiles)
+	self.pool:emit('onClearTiles', self, self.squares, tiles, numTiles)
 	table.insert(self.queue, self.removeTiles)
 end
 

@@ -1,3 +1,5 @@
+local ScorePopup = require 'scene.game.entity.score-popup'
+
 local timeAttack = {}
 
 function timeAttack:init()
@@ -7,7 +9,7 @@ function timeAttack:init()
 	self.time = 0
 end
 
-function timeAttack:onClearTiles(squares, tiles)
+function timeAttack:onClearTiles(board, squares, tiles, numTiles)
 	local scoreIncrement = 0
 	for i = 1, squares:count() do
 		scoreIncrement = scoreIncrement + i
@@ -15,9 +17,28 @@ function timeAttack:onClearTiles(squares, tiles)
 	scoreIncrement = scoreIncrement * self.chain
 	self.score = self.score + scoreIncrement
 	self.justClearedTiles = true
+
+	-- spawn the score popup
+	local sumTilesX, sumTilesY = 0, 0
+	for tile in pairs(tiles) do
+		sumTilesX = sumTilesX + tile.x
+		sumTilesY = sumTilesY + tile.y
+	end
+	local scorePopupX, scorePopupY = board.transform:transformPoint(
+		sumTilesX / numTiles + .5,
+		sumTilesY / numTiles + .5
+	)
+	self.pool:queue(ScorePopup(
+		self.pool,
+		scorePopupX,
+		scorePopupY,
+		squares:count(),
+		scoreIncrement,
+		self.chain
+	))
 end
 
-function timeAttack:onCheckSquares(squares)
+function timeAttack:onCheckSquares(board, squares)
 	if squares:count() > 0 then
 		if self.justClearedTiles then
 			self.chain = self.chain + 1

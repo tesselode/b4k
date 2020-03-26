@@ -16,4 +16,13 @@ function util.bind(f, argument)
 	return function(...) f(argument, ...) end
 end
 
+function util.getNumLinesInString(s)
+	local _, newlines = s:gsub('\n', '\n')
+	return newlines + 1
+end
+
+function util.getTextHeight(font, text)
+	return font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text)
+end
+
 return util
