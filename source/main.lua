@@ -1,9 +1,9 @@
-local Game = require 'scene.game'
+local TimeAttack = require 'scene.game.time-attack'
 local sceneManager = require 'scene-manager'
 
 function love.load()
 	sceneManager:hook()
-	sceneManager:enter(Game)
+	sceneManager:enter(TimeAttack)
 end
 
 function love.keypressed(key)

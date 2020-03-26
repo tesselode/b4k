@@ -166,7 +166,7 @@ function Board:clearTiles()
 	for tile in pairs(tiles) do
 		tile:clear()
 	end
-	self.pool:emit('onClearTiles', tiles)
+	self.pool:emit('onClearTiles', self.squares, tiles)
 	table.insert(self.queue, self.removeTiles)
 end
 

@@ -11,6 +11,7 @@ function Game:enter()
 	self.pool = nata.new {
 		systems = {
 			require 'scene.game.system.timer',
+			self.gameRulesSystem,
 			nata.oop(),
 		},
 	}
