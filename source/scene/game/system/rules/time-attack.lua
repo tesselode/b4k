@@ -1,4 +1,7 @@
+local color = require 'color'
+local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
+local util = require 'util'
 
 local timeAttack = {}
 
@@ -53,8 +56,35 @@ function timeAttack:update(dt)
 	self.time = self.time + dt
 end
 
+function timeAttack:drawScore()
+	local board = self.pool.groups.board.entities[1]
+	if not board then return end
+	local text = tostring(self.score)
+	local left, centerY = board.transform:transformPoint(-1/4, board.height/2)
+	local height = util.getTextHeight(font.hud, text)
+	love.graphics.push 'all'
+	love.graphics.setFont(font.hud)
+	love.graphics.setColor(color.white)
+	love.graphics.printf(text, left, centerY, 100000, 'center', -math.pi/2, 1, 1, 50000, height)
+	love.graphics.pop()
+end
+
+function timeAttack:drawTime()
+	local board = self.pool.groups.board.entities[1]
+	if not board then return end
+	local text = util.formatTime(self.time)
+	local right, bottom = board.transform:transformPoint(board.width, -1/4)
+	local height = util.getTextHeight(font.hud, text)
+	love.graphics.push 'all'
+	love.graphics.setFont(font.hud)
+	love.graphics.setColor(color.white)
+	love.graphics.printf(text, right, bottom, 100000, 'right', 0, 1, 1, 100000, height)
+	love.graphics.pop()
+end
+
 function timeAttack:draw()
-	love.graphics.print(self.score .. '\n' .. self.chain .. '\n' .. self.time, 0, 16)
+	self:drawTime()
+	self:drawScore()
 end
 
 return timeAttack

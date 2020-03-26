@@ -16,6 +16,9 @@ end
 function Game:enter(previous, options)
 	self.pool = nata.new {
 		data = {options = options},
+		groups = {
+			board = {filter = function(e) return e:is(Board) end}
+		},
 		systems = {
 			require 'scene.game.system.timer',
 			self:getRulesSystem(options),
