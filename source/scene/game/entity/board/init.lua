@@ -1,4 +1,5 @@
 local color = require 'color'
+local constant = require 'constant'
 local Grid = require 'grid'
 local Object = require 'lib.classic'
 local Tile = require 'scene.game.entity.board.tile'
@@ -29,10 +30,10 @@ end
 -- inits the transform object used for drawing and
 -- converting mouse coordinates from screen space to grid space
 function Board:initTransform()
-	local scale = math.min(love.graphics.getWidth() / self.width,
-		love.graphics.getHeight() / self.height) * self.baseScale
+	local scale = math.min(constant.screenWidth / self.width,
+		constant.screenHeight / self.height) * self.baseScale
 	self.transform = love.math.newTransform(
-		love.graphics.getWidth() / 2, love.graphics.getHeight() / 2,
+		constant.screenWidth / 2, constant.screenHeight / 2,
 		0,
 		scale, scale,
 		self.width / 2, self.height / 2
