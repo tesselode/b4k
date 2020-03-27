@@ -39,7 +39,6 @@ function ScorePopup:draw()
 		text = text .. 'chain x' .. self.chain .. '\n'
 	end
 	text = text .. '+' .. self.score
-	local height = util.getTextHeight(font.scorePopup, text)
 	local scale = self.scale / 2
 	love.graphics.push 'all'
 	love.graphics.setFont(font.scorePopup)
@@ -48,20 +47,18 @@ function ScorePopup:draw()
 		text,
 		self.x + 4, self.y + 4,
 		100000,
-		'center',
+		'center', 'middle',
 		0,
-		scale, scale,
-		50000, height/2
+		scale, scale
 	)
 	love.graphics.setColor(self.blinkPhase < .5 and color.orange or color.white)
 	util.printf(
 		text,
 		self.x, self.y,
 		100000,
-		'center',
+		'center', 'middle',
 		0,
-		scale, scale,
-		50000, height/2
+		scale, scale
 	)
 	love.graphics.pop()
 end

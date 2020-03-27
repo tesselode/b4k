@@ -71,12 +71,11 @@ function timeAttack:drawScore()
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
 	local text = tostring(self.score)
-	local left, centerY = board.transform:transformPoint(-1/4, board.height/2)
-	local height = util.getTextHeight(font.hud, text)
+	local left, middle = board.transform:transformPoint(-1/4, board.height/2)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	util.printf(text, left, centerY, 100000, 'center', -math.pi/2, .5, .5, 50000, height)
+	util.printf(text, left, middle, 100000, 'center', 'bottom', -math.pi/2, .5, .5)
 	love.graphics.pop()
 end
 
@@ -85,11 +84,10 @@ function timeAttack:drawTime()
 	if not board then return end
 	local text = util.formatTime(self.time)
 	local right, bottom = board.transform:transformPoint(board.width, -1/4)
-	local height = util.getTextHeight(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	util.printf(text, right, bottom, 100000, 'right', 0, .5, .5, 100000, height)
+	util.printf(text, right, bottom, 100000, 'right', 'bottom', 0, .5, .5)
 	love.graphics.pop()
 end
 
@@ -98,10 +96,7 @@ function timeAttack:drawSquaresCount()
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
 	local squareSize = 208
-	local text = tostring(self.numSquares)
 	local left, top = board.transform:transformPoint(0, board.height + 1/4)
-	local width = font.hud:getWidth(text)
-	local height = util.getTextHeight(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.translate(left + squareSize/2, top + squareSize/2)
 	love.graphics.scale(self.squareCounterScale)
@@ -112,7 +107,7 @@ function timeAttack:drawSquaresCount()
 	love.graphics.setColor(color.white)
 	love.graphics.rectangle('line', -squareSize/2, -squareSize/2, squareSize, squareSize)
 	love.graphics.setFont(font.hud)
-	util.print(self.numSquares, 12, -8, 0, .5, .5, width/2, height/2)
+	util.printf(self.numSquares, 12, -8, 100000, 'center', 'middle', 0, .5, .5)
 	love.graphics.pop()
 end
 

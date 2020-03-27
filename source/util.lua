@@ -56,22 +56,22 @@ function util.getTextHeight(font, text)
 end
 
 -- drawing
-function util.print(text, x, y, r, sx, sy, ox, oy, kx, ky)
+function util.printf(text, x, y, limit, halign, valign, r, sx, sy, kx, ky)
 	sx, sy = sx or 1, sy or 1
 	if sx > 1 or sy > 1 then
 		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
 			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
 	end
-	love.graphics.print(text, x, y, r, sx, sy, ox, oy, kx, ky)
-end
-
-function util.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
-	sx, sy = sx or 1, sy or 1
-	if sx > 1 or sy > 1 then
-		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
-			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
-	end
-	love.graphics.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
+	local font = love.graphics.getFont()
+	local _, lines = font:getWrap(text, limit)
+	local height = font:getHeight() * font:getLineHeight() * #lines
+	local ox = halign == 'left' and 0
+		or halign == 'center' and limit/2
+		or halign == 'right' and limit
+	local oy = valign == 'top' and 0
+		or valign == 'middle' and height/2
+		or valign == 'bottom' and height
+	love.graphics.printf(text, x, y, limit, halign, r, sx, sy, ox, oy, kx, ky)
 end
 
 return util
