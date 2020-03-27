@@ -113,7 +113,7 @@ function Board:checkSquares()
 			end
 		end
 	end
-	self.pool:emit('onCheckSquares', self, self.squares)
+	self.pool:emit('onCheckSquares', self, self.squares, numNewSquares)
 	return numNewSquares
 end
 
