@@ -1,3 +1,5 @@
+local log = require 'lib.log'
+
 local util = {}
 
 -- math
@@ -51,6 +53,15 @@ end
 
 function util.getTextHeight(font, text)
 	return font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text)
+end
+
+-- drawing
+function util.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
+	if sx > 1 or sy > 1 then
+		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
+			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
+	end
+	love.graphics.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
 end
 
 return util

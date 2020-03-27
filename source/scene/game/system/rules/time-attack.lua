@@ -65,7 +65,7 @@ function timeAttack:drawScore()
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	love.graphics.printf(text, left, centerY, 100000, 'center', -math.pi/2, 1, 1, 50000, height)
+	util.printf(text, left, centerY, 100000, 'center', -math.pi/2, .5, .5, 50000, height)
 	love.graphics.pop()
 end
 
@@ -78,7 +78,7 @@ function timeAttack:drawTime()
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	love.graphics.printf(text, right, bottom, 100000, 'right', 0, 1, 1, 100000, height)
+	util.printf(text, right, bottom, 100000, 'right', 0, .5, .5, 100000, height)
 	love.graphics.pop()
 end
 
