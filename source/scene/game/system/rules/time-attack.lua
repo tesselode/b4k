@@ -89,11 +89,12 @@ function timeAttack:drawScore()
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
 	local text = tostring(self.score)
-	local left, middle = board.transform:transformPoint(-1/4, board.height/2)
+	local right, middle = board.transform:transformPoint(-1/4, board.height/2)
+	local width, height = util.getTextSize(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	util.printf(text, left, middle, 100000, 'center', 'bottom', -math.pi/2, .5, .5)
+	love.graphics.print(text, right, middle, -math.pi/2, .5, .5, width/2, height)
 	love.graphics.pop()
 end
 
@@ -102,10 +103,11 @@ function timeAttack:drawTime()
 	if not board then return end
 	local text = util.formatTime(self.time)
 	local right, bottom = board.transform:transformPoint(board.width, -1/4)
+	local width, height = util.getTextSize(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	util.printf(text, right, bottom, 100000, 'right', 'bottom', 0, .5, .5)
+	love.graphics.print(text, right, bottom, 0, .5, .5, width, height)
 	love.graphics.pop()
 end
 
