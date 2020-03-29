@@ -88,13 +88,11 @@ end
 function timeAttack:drawScore()
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
-	local text = tostring(self.score)
 	local right, middle = board.transform:transformPoint(-1/4, board.height/2)
-	local width, height = util.getTextSize(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	love.graphics.print(text, right, middle, -math.pi/2, .5, .5, width/2, height)
+	util.print(self.score, right, middle, -math.pi/2, 1, 1, .5, 1)
 	love.graphics.pop()
 end
 
@@ -103,11 +101,10 @@ function timeAttack:drawTime()
 	if not board then return end
 	local text = util.formatTime(self.time)
 	local right, bottom = board.transform:transformPoint(board.width, -1/4)
-	local width, height = util.getTextSize(font.hud, text)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	love.graphics.print(text, right, bottom, 0, .5, .5, width, height)
+	util.print(text, right, bottom, 0, 1, 1, 1, 1)
 	love.graphics.pop()
 end
 
@@ -128,15 +125,15 @@ function timeAttack:drawSquaresCounter()
 	if not board then return end
 	local text = tostring(self.numSquares)
 	local left, top = board.transform:transformPoint(0, board.height + 1/4)
-	local width, height = util.getTextSize(font.hud, text)
-	local squareSize = height/2 + 16
+	local _, height = util.getTextSize(font.hud, text)
+	local squareSize = height + 16
 	love.graphics.push 'all'
-	love.graphics.translate(left + squareSize/2, top + height/4)
+	love.graphics.translate(left + squareSize/2, top + height/2)
 	love.graphics.scale(self.squareCounterScale)
 	self:drawSquaresCounterDecoration(squareSize)
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
-	love.graphics.print(text, 12, -8, 0, .5, .5, width/2, height/2)
+	util.print(text, 12, -8, 0, 1, 1, .5, .5)
 	love.graphics.pop()
 end
 
@@ -150,12 +147,12 @@ function timeAttack:drawChainCounter()
 	love.graphics.push 'all'
 	love.graphics.setColor(color.white)
 	love.graphics.setFont(font.hud)
-	love.graphics.print(
+	util.print(
 		text,
-		right - width/4, top + width/4,
+		right - width/2, top + height/2,
 		0,
-		self.chainCounterScale / 2, self.chainCounterScale / 2,
-		width/2, height/2
+		self.chainCounterScale, self.chainCounterScale,
+		.5, .5
 	)
 	love.graphics.pop()
 end

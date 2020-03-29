@@ -1,3 +1,4 @@
+local constant = require 'constant'
 local log = require 'lib.log'
 
 local util = {}
@@ -51,12 +52,56 @@ function util.getNumLinesInString(s)
 	return newlines + 1
 end
 
+--[[
+	text drawing
+	------------
+	the global font scale (constant.fontScale) gives some wiggle room for scaling
+	fonts above 1.0x without causing blurriness at the target 4k resolution
+
+	getTextSize gets the width and height of a piece of text printed with
+	a certain font, keeping in mind the global font scale
+
+	util.print and util.printf are the same as the love.graphics counterparts,
+	except for the following changes:
+	- text is automatically scaled according to the global font scale
+	- logs a warning if the final scale exceeds 1.0x
+	- ox and oy are in terms of the width and height of the text,
+	  rather than pixels
+]]
 function util.getTextSize(font, text, limit)
 	if limit then
 		local _, lines = font:getWrap(text, limit)
-		return limit, font:getHeight() * font:getLineHeight() * #lines
+		return limit / constant.fontScale, font:getHeight() * font:getLineHeight() * #lines / constant.fontScale
 	end
-	return font:getWidth(text), font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text)
+	return font:getWidth(text) / constant.fontScale,
+		font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text) / constant.fontScale
+end
+
+function util.print(text, x, y, r, sx, sy, ox, oy, kx, ky)
+	text = tostring(text)
+	sx = (sx or 1) / constant.fontScale
+	sy = (sy or sx) / constant.fontScale
+	if sx > 1 or sy > 1 then
+		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
+			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
+	end
+	local font = love.graphics.getFont()
+	local width, height = util.getTextSize(font, text)
+	love.graphics.print(text, x, y, r, sx, sy, ox * width * constant.fontScale, oy * height * constant.fontScale, kx, ky)
+end
+
+function util.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
+	text = tostring(text)
+	sx = (sx or 1) / constant.fontScale
+	sy = (sy or sx) / constant.fontScale
+	if sx > 1 or sy > 1 then
+		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
+			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
+	end
+	local font = love.graphics.getFont()
+	local width, height = util.getTextSize(font, text, limit)
+	love.graphics.printf(text, x, y, limit, align, r, sx, sy, ox * width * constant.fontScale,
+		oy * height * constant.fontScale, kx, ky)
 end
 
 return util

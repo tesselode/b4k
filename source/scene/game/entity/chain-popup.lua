@@ -20,15 +20,12 @@ function ChainPopup:new(pool, x, y)
 end
 
 function ChainPopup:draw()
-	local text = 'chain'
-	local width, height = util.getTextSize(font.scorePopup, text)
-	local scale = self.scale / 2
 	love.graphics.push 'all'
 	love.graphics.setFont(font.scorePopup)
 	love.graphics.setColor(color.withAlpha(color.maroon, self.alpha))
-	love.graphics.print(text, self.x + 4, self.y + 4, 0, scale, scale, width/2, height/2)
+	util.print('chain', self.x + 4, self.y + 4, 0, self.scale, self.scale, .5, .5)
 	love.graphics.setColor(color.withAlpha(color.white, self.alpha))
-	love.graphics.print(text, self.x, self.y, 0, scale, scale, width/2, height/2)
+	util.print('chain', self.x, self.y, 0, self.scale, self.scale, .5, .5)
 	love.graphics.pop()
 end
 
