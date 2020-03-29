@@ -51,8 +51,8 @@ function util.getNumLinesInString(s)
 	return newlines + 1
 end
 
-function util.getTextHeight(font, text)
-	return font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text)
+function util.getTextSize(font, text)
+	return font:getWidth(text), font:getHeight() * font:getLineHeight() * util.getNumLinesInString(text)
 end
 
 -- drawing

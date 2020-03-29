@@ -15,6 +15,7 @@ function timeAttack:init()
 
 	-- cosmetic
 	self.squareCounterScale = 1
+	self.chainCounterScale = 1
 end
 
 function timeAttack:createChainPopup(board, squares)
@@ -65,6 +66,8 @@ function timeAttack:onCheckSquares(board, squares, numNewSquares)
 		if self.justClearedTiles then
 			self.chain = self.chain + 1
 			self:createChainPopup(board, squares)
+			self.chainCounterScale = 1.25
+			self.pool.data.tweens:to(self, .3, {chainCounterScale = 1})
 		end
 	else
 		self.chain = 1
@@ -106,23 +109,52 @@ function timeAttack:drawTime()
 	love.graphics.pop()
 end
 
+function timeAttack:drawSquaresCounterDecoration(size)
+	love.graphics.push 'all'
+	love.graphics.setLineWidth(8)
+	love.graphics.setColor(color.withAlpha(color.white, 1/4))
+	love.graphics.line(-size/2, 0, size/2, 0)
+	love.graphics.line(0, -size/2, 0, size/2)
+	love.graphics.setColor(color.white)
+	love.graphics.rectangle('line', -size/2, -size/2, size, size)
+	love.graphics.pop()
+end
+
 function timeAttack:drawSquaresCounter()
 	if self.numSquares <= 0 then return end
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
-	local squareSize = 208
+	local text = tostring(self.numSquares)
 	local left, top = board.transform:transformPoint(0, board.height + 1/4)
+	local width, height = util.getTextSize(font.hud, text)
+	local squareSize = height/2 + 16
 	love.graphics.push 'all'
-	love.graphics.translate(left + squareSize/2, top + squareSize/2)
+	love.graphics.translate(left + squareSize/2, top + height/4)
 	love.graphics.scale(self.squareCounterScale)
-	love.graphics.setColor(color.withAlpha(color.white, 1/4))
-	love.graphics.setLineWidth(8)
-	love.graphics.line(0, -squareSize/2, 0, squareSize/2)
-	love.graphics.line(-squareSize/2, 0, squareSize/2, 0)
-	love.graphics.setColor(color.white)
-	love.graphics.rectangle('line', -squareSize/2, -squareSize/2, squareSize, squareSize)
+	self:drawSquaresCounterDecoration(squareSize)
 	love.graphics.setFont(font.hud)
-	util.printf(self.numSquares, 12, -8, 100000, 'center', 'middle', 0, .5, .5)
+	love.graphics.setColor(color.white)
+	love.graphics.print(text, 12, -8, 0, .5, .5, width/2, height/2)
+	love.graphics.pop()
+end
+
+function timeAttack:drawChainCounter()
+	if self.chain <= 1 then return end
+	local board = self.pool.groups.board.entities[1]
+	if not board then return end
+	local right, top = board.transform:transformPoint(board.width, board.height + 1/4)
+	local text = self.chain .. 'x'
+	local width, height = util.getTextSize(font.hud, text)
+	love.graphics.push 'all'
+	love.graphics.setColor(color.white)
+	love.graphics.setFont(font.hud)
+	love.graphics.print(
+		text,
+		right - width/4, top + width/4,
+		0,
+		self.chainCounterScale / 2, self.chainCounterScale / 2,
+		width/2, height/2
+	)
 	love.graphics.pop()
 end
 
@@ -130,6 +162,7 @@ function timeAttack:draw()
 	self:drawTime()
 	self:drawScore()
 	self:drawSquaresCounter()
+	self:drawChainCounter()
 end
 
 return timeAttack
