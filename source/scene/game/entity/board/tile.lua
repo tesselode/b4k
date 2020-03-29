@@ -1,5 +1,6 @@
 local color = require 'color'
 local Object = require 'lib.classic'
+local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 
 local Tile = Object:extend()
 
@@ -79,6 +80,7 @@ function Tile:clear()
 	self.pool.data.tweens:to(self, self.clearAnimationDuration, {scale = 0})
 		:ease 'quartout'
 		:oncomplete(function() self.state = 'cleared' end)
+	self.pool:queue(TileClearParticles(self))
 end
 
 function Tile:update(dt)

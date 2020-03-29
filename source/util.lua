@@ -57,7 +57,8 @@ end
 
 -- drawing
 function util.printf(text, x, y, limit, halign, valign, r, sx, sy, kx, ky)
-	sx, sy = sx or 1, sy or 1
+	sx = sx or 1
+	sy = sy or sx
 	if sx > 1 or sy > 1 then
 		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
 			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))

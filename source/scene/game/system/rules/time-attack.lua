@@ -1,3 +1,4 @@
+local ChainPopup = require 'scene.game.entity.chain-popup'
 local color = require 'color'
 local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
@@ -14,6 +15,19 @@ function timeAttack:init()
 
 	-- cosmetic
 	self.squareCounterScale = 1
+end
+
+function timeAttack:createChainPopup(board, squares)
+	local sumX, sumY = 0, 0
+	for _, x, y in squares:items() do
+		sumX = sumX + x + 1
+		sumY = sumY + y + 1
+	end
+	local chainPopupX, chainPopupY = board.transform:transformPoint(
+		sumX / squares:count(),
+		sumY / squares:count()
+	)
+	self.pool:queue(ChainPopup(self.pool, chainPopupX, chainPopupY))
 end
 
 function timeAttack:onClearTiles(board, squares, tiles, numTiles)
@@ -50,6 +64,7 @@ function timeAttack:onCheckSquares(board, squares, numNewSquares)
 	if squares:count() > 0 then
 		if self.justClearedTiles then
 			self.chain = self.chain + 1
+			self:createChainPopup(board, squares)
 		end
 	else
 		self.chain = 1
@@ -91,7 +106,7 @@ function timeAttack:drawTime()
 	love.graphics.pop()
 end
 
-function timeAttack:drawSquaresCount()
+function timeAttack:drawSquaresCounter()
 	if self.numSquares <= 0 then return end
 	local board = self.pool.groups.board.entities[1]
 	if not board then return end
@@ -114,7 +129,7 @@ end
 function timeAttack:draw()
 	self:drawTime()
 	self:drawScore()
-	self:drawSquaresCount()
+	self:drawSquaresCounter()
 end
 
 return timeAttack
