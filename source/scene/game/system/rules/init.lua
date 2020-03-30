@@ -9,6 +9,7 @@ local rules = {}
 
 function rules:initBoard()
 	self.board = self.pool:queue(Board(self.pool))
+	self.board:fillWithRandomTiles()
 end
 
 function rules:init()

@@ -1,6 +1,7 @@
 local color = require 'color'
 local constant = require 'constant'
 local Grid = require 'grid'
+local log = require 'lib.log'
 local Object = require 'lib.classic'
 local SquareHighlight = require 'scene.game.entity.board.square-highlight'
 local Tile = require 'scene.game.entity.board.tile'
@@ -20,11 +21,6 @@ end
 -- and fills the board with random tiles
 function Board:initTiles()
 	self.tiles = {}
-	for x = 0, self.width - 1 do
-		for y = 0, self.height - 1 do
-			self:spawnTile(x, y)
-		end
-	end
 	self.squares = Grid(self.width, self.height)
 end
 
@@ -66,6 +62,41 @@ function Board:new(pool)
 	self:checkSquares()
 end
 
+-- Changes the colors of tiles until there are no matching squares
+function Board:scramble()
+	-- if there's only one color (probably would only happen for testing purposes),
+	-- then it'll be impossible to prevent matching squares, so we'll just stop now
+	if #Tile.colors < 2 then return end
+	self:checkSquares(true)
+	if self.squares:count() < 1 then return end
+	log.trace 'scrambling the board'
+	local steps = 0
+	while self.squares:count() > 0 do
+		steps = steps + 1
+		if steps > 20 then
+			log.warn('exceeded 20 steps, giving up on scrambling the board')
+			return
+		end
+		log.trace(('step %i: %i squares'):format(steps, self.squares:count()))
+		for _, x, y in self.squares:items() do
+			local tile = self:getTileAt(x, y)
+			tile.color = tile.color + 1
+			if tile.color > #tile.colors then tile.color = 1 end
+		end
+		self:checkSquares(true)
+	end
+	log.trace(('scrambled the board in %i steps'):format(steps))
+end
+
+function Board:fillWithRandomTiles()
+	for x = 0, constant.boardWidth - 1 do
+		for y = 0, constant.boardHeight - 1 do
+			self:spawnTile(x, y)
+		end
+	end
+	self:scramble()
+end
+
 -- returns true if there are no blocking animations playing
 -- (like tiles falling, rotating, etc.)
 function Board:isIdle()
@@ -104,7 +135,7 @@ function Board:getSquareAt(x, y)
 end
 
 -- checks for matching color squares anywhere on the board
-function Board:checkSquares()
+function Board:checkSquares(silent)
 	local previousSquares = self.squares
 	self.squares = Grid(self.width, self.height)
 	local numNewSquares = 0
@@ -117,7 +148,9 @@ function Board:checkSquares()
 					numNewSquares = numNewSquares + 1
 				end
 			end
-			self.squareHighlights:get(x, y):setActive(square and true or false)
+			if not silent then
+				self.squareHighlights:get(x, y):setActive(square and true or false)
+			end
 		end
 	end
 	self.pool:emit('onCheckSquares', self.squares, numNewSquares)
