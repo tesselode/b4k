@@ -1,3 +1,4 @@
+local Board = require 'scene.game.entity.board'
 local ChainPopup = require 'scene.game.entity.chain-popup'
 local color = require 'color'
 local font = require 'font'
@@ -6,7 +7,12 @@ local util = require 'util'
 
 local rules = {}
 
+function rules:initBoard()
+	self.board = self.pool:queue(Board(self.pool))
+end
+
 function rules:init()
+	self:initBoard()
 	self.numSquares = 0
 	self.score = 0
 	self.chain = 1
@@ -18,20 +24,20 @@ function rules:init()
 	self.chainCounterScale = 1
 end
 
-function rules:createChainPopup(board, squares)
+function rules:createChainPopup(squares)
 	local sumX, sumY = 0, 0
 	for _, x, y in squares:items() do
 		sumX = sumX + x + 1
 		sumY = sumY + y + 1
 	end
-	local chainPopupX, chainPopupY = board.transform:transformPoint(
+	local chainPopupX, chainPopupY = self.board.transform:transformPoint(
 		sumX / squares:count(),
 		sumY / squares:count()
 	)
 	self.pool:queue(ChainPopup(self.pool, chainPopupX, chainPopupY))
 end
 
-function rules:onClearTiles(board, squares, tiles, numTiles)
+function rules:onClearTiles(squares, tiles, numTiles)
 	local scoreIncrement = 0
 	for i = 1, squares:count() do
 		scoreIncrement = scoreIncrement + i
@@ -46,7 +52,7 @@ function rules:onClearTiles(board, squares, tiles, numTiles)
 		sumTilesX = sumTilesX + tile.x
 		sumTilesY = sumTilesY + tile.y
 	end
-	local scorePopupX, scorePopupY = board.transform:transformPoint(
+	local scorePopupX, scorePopupY = self.board.transform:transformPoint(
 		sumTilesX / numTiles + .5,
 		sumTilesY / numTiles + .5
 	)
@@ -60,12 +66,12 @@ function rules:onClearTiles(board, squares, tiles, numTiles)
 	))
 end
 
-function rules:onCheckSquares(board, squares, numNewSquares)
+function rules:onCheckSquares(squares, numNewSquares)
 	self.numSquares = squares:count()
 	if squares:count() > 0 then
 		if self.justClearedTiles then
 			self.chain = self.chain + 1
-			self:createChainPopup(board, squares)
+			self:createChainPopup(squares)
 			-- animate chain counter
 			self.chainCounterScale = 1.25
 			self.pool.data.tweens:to(self, .3, {chainCounterScale = 1})
@@ -86,9 +92,7 @@ function rules:update(dt)
 end
 
 function rules:drawScore()
-	local board = self.pool.groups.board.entities[1]
-	if not board then return end
-	local right, middle = board.transform:transformPoint(-1/4, board.height/2)
+	local right, middle = self.board.transform:transformPoint(-1/4, self.board.height/2)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
@@ -97,10 +101,8 @@ function rules:drawScore()
 end
 
 function rules:drawTime()
-	local board = self.pool.groups.board.entities[1]
-	if not board then return end
 	local text = util.formatTime(self.time)
-	local right, bottom = board.transform:transformPoint(board.width, -1/4)
+	local right, bottom = self.board.transform:transformPoint(self.board.width, -1/4)
 	love.graphics.push 'all'
 	love.graphics.setFont(font.hud)
 	love.graphics.setColor(color.white)
@@ -121,10 +123,8 @@ end
 
 function rules:drawSquaresCounter()
 	if self.numSquares <= 0 then return end
-	local board = self.pool.groups.board.entities[1]
-	if not board then return end
 	local text = tostring(self.numSquares)
-	local left, top = board.transform:transformPoint(0, board.height + 1/4)
+	local left, top = self.board.transform:transformPoint(0, self.board.height + 1/4)
 	local _, height = util.getTextSize(font.hud, text)
 	local squareSize = height + 16
 	love.graphics.push 'all'
@@ -139,9 +139,7 @@ end
 
 function rules:drawChainCounter()
 	if self.chain <= 1 then return end
-	local board = self.pool.groups.board.entities[1]
-	if not board then return end
-	local right, top = board.transform:transformPoint(board.width, board.height + 1/4)
+	local right, top = self.board.transform:transformPoint(self.board.width, self.board.height + 1/4)
 	local text = self.chain .. 'x'
 	local width, height = util.getTextSize(font.hud, text)
 	love.graphics.push 'all'

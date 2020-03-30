@@ -24,8 +24,6 @@ function Game:enter(previous, options)
 			nata.oop(),
 		},
 	}
-	self.pool:queue(Board(self.pool))
-	self.pool:flush()
 end
 
 function Game:update(dt)

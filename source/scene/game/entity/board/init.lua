@@ -120,7 +120,7 @@ function Board:checkSquares()
 			self.squareHighlights:get(x, y):setActive(square and true or false)
 		end
 	end
-	self.pool:emit('onCheckSquares', self, self.squares, numNewSquares)
+	self.pool:emit('onCheckSquares', self.squares, numNewSquares)
 	return numNewSquares
 end
 
@@ -179,7 +179,7 @@ function Board:clearTiles()
 	for _, _, _, squareHighlight in self.squareHighlights:items() do
 		squareHighlight:onClearTiles()
 	end
-	self.pool:emit('onClearTiles', self, self.squares, tiles, numTiles)
+	self.pool:emit('onClearTiles', self.squares, tiles, numTiles)
 	table.insert(self.queue, self.removeTiles)
 end
 
