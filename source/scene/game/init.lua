@@ -1,7 +1,6 @@
 local Board = require 'scene.game.entity.board'
 local nata = require 'lib.nata'
 local Object = require 'lib.classic'
-local SquareHighlight = require 'scene.game.entity.square-highlight'
 
 local function shouldRemove(e) return e.removeFromPool end
 
@@ -25,14 +24,7 @@ function Game:enter(previous, options)
 			nata.oop(),
 		},
 	}
-	local board = Board(self.pool)
-	for x = 0, board.width - 2 do
-		for y = 0, board.height - 2 do
-			self.pool:queue(SquareHighlight(self.pool, x, y))
-		end
-	end
-	self.pool:flush()
-	self.pool:queue(board)
+	self.pool:queue(Board(self.pool))
 	self.pool:flush()
 end
 

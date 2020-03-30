@@ -12,15 +12,14 @@ function SquareHighlight:new(pool, x, y)
 	self.alpha = 0
 end
 
-function SquareHighlight:onCheckSquares(board, squares)
-	local squareAtOwnPosition = squares:get(self.x, self.y) and true or false
-	if squareAtOwnPosition and not self.active then
+function SquareHighlight:setActive(active)
+	if active and not self.active then
 		self.scale = 1.5
 		self.pool.data.tweens:to(self, .15, {scale = 1, alpha = 1})
-	elseif self.active and not squareAtOwnPosition then
+	elseif self.active and not active then
 		self.pool.data.tweens:to(self, .15, {alpha = 0})
 	end
-	self.active = squareAtOwnPosition
+	self.active = active
 end
 
 function SquareHighlight:onClearTiles()
@@ -30,7 +29,7 @@ function SquareHighlight:onClearTiles()
 	end
 end
 
-function SquareHighlight:drawOnBoard()
+function SquareHighlight:draw()
 	love.graphics.push 'all'
 	love.graphics.setColor(color.withAlpha(color.white, self.alpha))
 	love.graphics.setLineWidth(.1)

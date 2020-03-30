@@ -2,6 +2,7 @@ local color = require 'color'
 local constant = require 'constant'
 local Grid = require 'grid'
 local Object = require 'lib.classic'
+local SquareHighlight = require 'scene.game.entity.board.square-highlight'
 local Tile = require 'scene.game.entity.board.tile'
 local util = require 'util'
 
@@ -27,6 +28,15 @@ function Board:initTiles()
 	self.squares = Grid(self.width, self.height)
 end
 
+function Board:initSquareHighlights()
+	self.squareHighlights = Grid(self.width - 1, self.height - 1)
+	for x = 0, self.width - 2 do
+		for y = 0, self.height - 2 do
+			self.squareHighlights:set(x, y, SquareHighlight(self.pool, x, y))
+		end
+	end
+end
+
 -- inits the transform object used for drawing and
 -- converting mouse coordinates from screen space to grid space
 function Board:initTransform()
@@ -48,15 +58,11 @@ end
 function Board:new(pool)
 	self.pool = pool
 	self:initTiles()
+	self:initSquareHighlights()
 	self:initTransform()
 	self:initCursor()
 	self.queue = {}
 	self.stencil = util.bind(self.stencil, self)
-end
-
--- check squares when the board is added to the pool
-function Board:add(e)
-	if e ~= self then return end
 	self:checkSquares()
 end
 
@@ -111,6 +117,7 @@ function Board:checkSquares()
 					numNewSquares = numNewSquares + 1
 				end
 			end
+			self.squareHighlights:get(x, y):setActive(square and true or false)
 		end
 	end
 	self.pool:emit('onCheckSquares', self, self.squares, numNewSquares)
@@ -169,6 +176,9 @@ function Board:clearTiles()
 		numTiles = numTiles + 1
 		tile:clear()
 	end
+	for _, _, _, squareHighlight in self.squareHighlights:items() do
+		squareHighlight:onClearTiles()
+	end
 	self.pool:emit('onClearTiles', self, self.squares, tiles, numTiles)
 	table.insert(self.queue, self.removeTiles)
 end
@@ -221,14 +231,22 @@ function Board:rotate(x, y, counterClockwise)
 	end
 end
 
-function Board:update(dt)
+function Board:updateTiles(dt)
 	for _, tile in ipairs(self.tiles) do
 		tile:update(dt)
 	end
+end
+
+function Board:flushActions()
 	while #self.queue > 0 and self:isIdle() do
 		self.queue[1](self)
 		table.remove(self.queue, 1)
 	end
+end
+
+function Board:update(dt)
+	self:updateTiles(dt)
+	self:flushActions()
 end
 
 function Board:mousemoved(x, y, dx, dy, isTouch)
@@ -260,6 +278,12 @@ function Board:drawTiles()
 	love.graphics.pop()
 end
 
+function Board:drawSquareHighlights()
+	for _, _, _, squareHighlight in self.squareHighlights:items() do
+		squareHighlight:draw()
+	end
+end
+
 function Board:drawCursor()
 	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
@@ -273,6 +297,7 @@ function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawTiles()
+	self:drawSquareHighlights()
 	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
 	love.graphics.pop()
