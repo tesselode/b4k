@@ -5,15 +5,18 @@ local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
 local util = require 'util'
 
-local rules = {}
+local rules = {
+	showScorePopups = true,
+	showChainPopups = true,
+}
 
 function rules:initBoard()
 	self.board = self.pool:queue(Board(self.pool))
 	self.board:fillWithRandomTiles()
 end
 
-function rules:init()
-	self:initBoard()
+function rules:init(...)
+	self:initBoard(...)
 	self.numSquares = 0
 	self.score = 0
 	self.chain = 1
@@ -48,6 +51,7 @@ function rules:onClearTiles(squares, tiles, numTiles)
 	self.justClearedTiles = true
 
 	-- spawn the score popup
+	if not self.showScorePopups then return end
 	local sumTilesX, sumTilesY = 0, 0
 	for tile in pairs(tiles) do
 		sumTilesX = sumTilesX + tile.x
@@ -72,7 +76,9 @@ function rules:onCheckSquares(squares, numNewSquares)
 	if squares:count() > 0 then
 		if self.justClearedTiles then
 			self.chain = self.chain + 1
-			self:createChainPopup(squares)
+			if self.showChainPopups then
+				self:createChainPopup(squares)
+			end
 			-- animate chain counter
 			self.chainCounterScale = 1.25
 			self.pool.data.tweens:to(self, .3, {chainCounterScale = 1})

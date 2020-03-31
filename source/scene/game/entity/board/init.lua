@@ -51,8 +51,9 @@ function Board:initCursor()
 	self.mouseInBounds = false
 end
 
-function Board:new(pool)
+function Board:new(pool, options)
 	self.pool = pool
+	self.options = options or {}
 	self:initTiles()
 	self:initSquareHighlights()
 	self:initTransform()
@@ -240,7 +241,9 @@ function Board:removeTiles()
 			table.remove(self.tiles, i)
 		end
 	end
-	self:replenishTiles()
+	if self.options.replenishTiles ~= false then
+		self:replenishTiles()
+	end
 	self:fallTiles()
 	table.insert(self.queue, self.checkSquares)
 end

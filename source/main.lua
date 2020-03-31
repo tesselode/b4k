@@ -28,7 +28,7 @@ function love.load()
 			'draw',
 		},
 	}
-	sceneManager:enter(Game, {mode = 'timeAttack'})
+	sceneManager:enter(Game, 'timeAttack', '1')
 end
 
 function love.keypressed(key)
