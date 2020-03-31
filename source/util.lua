@@ -79,8 +79,11 @@ end
 
 function util.print(text, x, y, r, sx, sy, ox, oy, kx, ky)
 	text = tostring(text)
-	sx = (sx or 1) / constant.fontScale
-	sy = (sy or sx) / constant.fontScale
+	sx = sx or 1
+	sy = sy or sx
+	sx = sx / constant.fontScale
+	sy = sy / constant.fontScale
+	ox, oy = ox or 0, oy or 0
 	if sx > 1 or sy > 1 then
 		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
 			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
@@ -92,8 +95,11 @@ end
 
 function util.printf(text, x, y, limit, align, r, sx, sy, ox, oy, kx, ky)
 	text = tostring(text)
-	sx = (sx or 1) / constant.fontScale
-	sy = (sy or sx) / constant.fontScale
+	sx = sx or 1
+	sy = sy or sx
+	sx = sx / constant.fontScale
+	sy = sy / constant.fontScale
+	ox, oy = ox or 0, oy or 0
 	if sx > 1 or sy > 1 then
 		log.warn(debug.traceback(('Drawing text with a scale of (%f, %f), which is greater than 1. '
 			.. 'This can lead to blurry fonts at higher screen resolutions.'):format(sx, sy), 2))
