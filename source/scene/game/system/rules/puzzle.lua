@@ -18,6 +18,7 @@ function puzzle:initBoard(puzzleName)
 	for _, gid, x, y in self.puzzle.layers.tiles:getTiles() do
 		self.board:spawnTile(x, y, gid)
 	end
+	self.board:checkSquares()
 end
 
 function puzzle:init(...)

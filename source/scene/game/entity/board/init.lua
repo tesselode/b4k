@@ -60,7 +60,6 @@ function Board:new(pool, options)
 	self:initCursor()
 	self.queue = {}
 	self.stencil = util.bind(self.stencil, self)
-	self:checkSquares()
 	self.acceptInput = true
 end
 
