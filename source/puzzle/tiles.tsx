@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.3.2" name="tiles" tilewidth="1" tileheight="1" tilecount="8" columns="4">
+<tileset version="1.2" tiledversion="1.3.3" name="tiles" tilewidth="1" tileheight="1" tilecount="8" columns="4">
  <image source="tiles.png" width="4" height="2"/>
  <tile id="0">
   <properties>
@@ -23,7 +23,7 @@
  </tile>
  <tile id="4">
   <properties>
-   <property name="color" value="grey"/>
+   <property name="color" value="inert"/>
   </properties>
  </tile>
 </tileset>

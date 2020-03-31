@@ -13,10 +13,10 @@ local puzzle = setmetatable({
 
 function puzzle:initBoard(puzzleName)
 	self.board = self.pool:queue(Board(self.pool, {replenishTiles = false}))
-	self.puzzle = cartographer.load('puzzle/' .. puzzleName .. '.lua')
-	self.moves = self.puzzle.properties.moves
-	for _, gid, x, y in self.puzzle.layers.tiles:getTiles() do
-		self.board:spawnTile(x, y, gid)
+	self.map = cartographer.load('puzzle/' .. puzzleName .. '.lua')
+	self.moves = self.map.properties.moves
+	for _, gid, x, y in self.map.layers.tiles:getTiles() do
+		self.board:spawnTile(x, y, self.map:getTileProperty(gid, 'color'))
 	end
 	self.board:checkSquares()
 end

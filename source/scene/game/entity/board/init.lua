@@ -125,6 +125,9 @@ function Board:getSquareAt(x, y)
 	if not (topLeft and topRight and bottomRight and bottomLeft) then
 		return
 	end
+	local hasInertTile = topLeft.color == 'inert' or topRight.color == 'inert'
+		or bottomRight.color == 'inert' or bottomLeft.color == 'inert'
+	if hasInertTile then return end
 	local sameColor = topLeft.color == topRight.color
 		and topRight.color == bottomRight.color
 		and bottomRight.color == bottomLeft.color

@@ -9,6 +9,7 @@ Tile.colors = {
 	color.red,
 	color.blue,
 	color.yellow,
+	inert = color.maroon,
 }
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
