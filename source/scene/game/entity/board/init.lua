@@ -61,6 +61,7 @@ function Board:new(pool, options)
 	self.queue = {}
 	self.stencil = util.bind(self.stencil, self)
 	self:checkSquares()
+	self.acceptInput = true
 end
 
 -- Changes the colors of tiles until there are no matching squares
@@ -265,6 +266,7 @@ function Board:rotate(x, y, counterClockwise)
 	else
 		self:checkNewSquares()
 	end
+	self.pool:emit('onRotate', counterClockwise)
 end
 
 function Board:updateTiles(dt)
@@ -295,6 +297,7 @@ function Board:mousemoved(x, y, dx, dy, isTouch)
 end
 
 function Board:mousepressed(x, y, button, isTouch, presses)
+	if not self.acceptInput then return end
 	if not self.mouseInBounds then return end
 	if button == 1 then self:rotate(self.cursorX, self.cursorY, true) end
 	if button == 2 then self:rotate(self.cursorX, self.cursorY) end
@@ -321,10 +324,11 @@ function Board:drawSquareHighlights()
 end
 
 function Board:drawCursor()
+	if not self.acceptInput then return end
 	if not self.mouseInBounds then return end
 	love.graphics.push 'all'
 	love.graphics.setColor(color.white)
-	love.graphics.setLineWidth(1/8)
+	love.graphics.setLineWidth(.1)
 	love.graphics.rectangle('line', self.cursorX, self.cursorY, 2, 2)
 	love.graphics.pop()
 end
