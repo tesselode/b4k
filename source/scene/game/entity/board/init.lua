@@ -307,6 +307,22 @@ function Board:stencil()
 	love.graphics.rectangle('fill', 0, 0, self.width, self.height)
 end
 
+function Board:drawBackground()
+	love.graphics.push 'all'
+	for x = 0, self.width - 1 do
+		for y = 0, self.height - 1 do
+			local index = x + y * (self.width - 1)
+			if index % 2 == 0 then
+				love.graphics.setColor(.5, .5, .5, .25)
+			else
+				love.graphics.setColor(.25, .25, .25, .25)
+			end
+			love.graphics.rectangle('fill', x, y, 1, 1)
+		end
+	end
+	love.graphics.pop()
+end
+
 function Board:drawTiles()
 	love.graphics.push 'all'
 	love.graphics.setStencilTest('gequal', 1)
@@ -333,13 +349,23 @@ function Board:drawCursor()
 	love.graphics.pop()
 end
 
+function Board:drawOutline()
+	love.graphics.push 'all'
+	love.graphics.setColor(color.white)
+	love.graphics.setLineWidth(.05)
+	love.graphics.rectangle('line', 0, 0, self.width, self.height)
+	love.graphics.pop()
+end
+
 function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
+	self:drawBackground()
 	self:drawTiles()
 	self:drawSquareHighlights()
 	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
+	self:drawOutline()
 	love.graphics.pop()
 end
 
