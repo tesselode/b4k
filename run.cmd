@@ -16,7 +16,7 @@ for %%f in (source/puzzle/*.tmx) do (
 echo;
 echo running love
 echo ------------
-lovec source
+lovec source %*
 
 :: remove ignored files
 echo;

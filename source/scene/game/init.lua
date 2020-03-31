@@ -7,11 +7,17 @@ local function shouldRemove(e) return e.removeFromPool end
 local Game = Object:extend()
 
 function Game:getRulesSystem(mode)
-	return mode == 'timeAttack' and require 'scene.game.system.rules.time-attack'
-		or mode == 'puzzle' and require 'scene.game.system.rules.puzzle'
+	if mode == 'timeAttack' then
+		return require 'scene.game.system.rules.time-attack'
+	elseif mode == 'puzzle' then
+		return require 'scene.game.system.rules.puzzle'
+	else
+		error('no mode called "' .. mode .. '"')
+	end
 end
 
 function Game:enter(previous, mode, ...)
+	assert(mode, 'no game mode argument provided')
 	self.pool = nata.new({
 		groups = {
 			board = {filter = function(e) return e:is(Board) end}

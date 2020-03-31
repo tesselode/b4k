@@ -19,7 +19,23 @@ end
 
 initMainTransform()
 
-function love.load()
+local function parseCommandLineArguments(rawArguments)
+	local arguments = {[''] = {}}
+	local currentFlag = ''
+	for _, argument in ipairs(rawArguments) do
+		if argument:sub(1, 2) == '--' then
+			local flag = argument:sub(3, -1)
+			currentFlag = flag
+			arguments[flag] = {}
+		else
+			table.insert(arguments[currentFlag], argument)
+		end
+	end
+	return arguments
+end
+
+function love.load(arguments)
+	arguments = parseCommandLineArguments(arguments)
 	sceneManager:hook {
 		exclude = {
 			'mousemoved',
@@ -28,7 +44,7 @@ function love.load()
 			'draw',
 		},
 	}
-	sceneManager:enter(Game, 'timeAttack', '1')
+	sceneManager:enter(Game, unpack(arguments['']))
 end
 
 function love.keypressed(key)
