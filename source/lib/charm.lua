@@ -360,6 +360,11 @@ function Element:size(width, height)
 	return self
 end
 
+function Element:scale(scaleX, scaleY)
+	self:width(self:get 'width' * scaleX)
+	self:height(self:get 'height' * (scaleY or scaleX))
+end
+
 function Element:x(x, origin)
 	checkArgument(1, x, 'number')
 	checkOptionalArgument(2, origin, 'number')
@@ -460,6 +465,15 @@ function Element:shiftChildren(dx, dy)
 		child:shift(dx, dy)
 	end
 	return self
+end
+
+function Element:alignChildren(originX, originY)
+	checkArgument(1, originX, 'number')
+	checkArgument(2, originY, 'number')
+	local x, y, width, height = self:get 'childrenRectangle'
+	local dx = self:get 'width' * originX - (x + width * originX)
+	local dy = self:get 'height' * originY - (y + height * originY)
+	self:shiftChildren(dx, dy)
 end
 
 function Element:expand()
@@ -949,14 +963,6 @@ function Text:shadowOffset(shadowOffsetX, shadowOffsetY)
 	return self
 end
 
-function Text:scale(scaleX, scaleY)
-	checkArgument(1, scaleX, 'number')
-	checkOptionalArgument(2, scaleY, 'number')
-	self:width(self._textWidth * scaleX)
-	self:height(self._textHeight * (scaleY or scaleX))
-	return self
-end
-
 function Text:drawBottom()
 	love.graphics.push 'all'
 	love.graphics.setFont(self._font)
@@ -1001,14 +1007,6 @@ end
 
 function Image:color(r, g, b, a)
 	self:setColor('_color', r, g, b, a)
-	return self
-end
-
-function Image:scale(scaleX, scaleY)
-	checkArgument(1, scaleX, 'number')
-	checkOptionalArgument(2, scaleY, 'number')
-	self:width(self._image:getWidth() * scaleX)
-	self:height(self._image:getHeight() * (scaleY or scaleX))
 	return self
 end
 

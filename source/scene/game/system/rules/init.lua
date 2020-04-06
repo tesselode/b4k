@@ -1,11 +1,26 @@
 local Board = require 'scene.game.entity.board'
 local ChainPopup = require 'scene.game.entity.chain-popup'
+local charm = require 'lib.charm'
 local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
-local Rotation = require 'ui.rotation'
 local ScorePopup = require 'scene.game.entity.score-popup'
+local Transform = require 'ui.transform'
 local util = require 'util'
+
+local SquaresCounterDecoration = charm.extend('SquaresCounterDecoration', 'element')
+
+function SquaresCounterDecoration:drawBottom()
+	local width, height = self:get 'size'
+	love.graphics.push 'all'
+	love.graphics.setLineWidth(8)
+	love.graphics.setColor(color.withAlpha(color.white, 1/4))
+	love.graphics.line(0, height/2, width, height/2)
+	love.graphics.line(width/2, 0, width/2, height)
+	love.graphics.setColor(color.white)
+	love.graphics.rectangle('line', 0, 0, width, height)
+	love.graphics.pop()
+end
 
 local rules = {
 	showScorePopups = true,
@@ -103,7 +118,8 @@ end
 function rules:drawScore()
 	local right, centerY = self.board.transform:transformPoint(-1/4, self.board.height/2)
 	self.pool.data.ui
-		:new(Rotation, -math.pi/2)
+		:new(Transform)
+			:angle(-math.pi/2)
 			:origin(.5, 1)
 			:beginChildren()
 				:new('text', font.hud, self.score)
@@ -136,36 +152,39 @@ end
 
 function rules:drawSquaresCounter()
 	if self.numSquares <= 0 then return end
-	local text = tostring(self.numSquares)
 	local left, top = self.board.transform:transformPoint(0, self.board.height + 1/4)
-	local _, height = util.getTextSize(font.hud, text)
-	local squareSize = height + 16
-	love.graphics.push 'all'
-	love.graphics.translate(left + squareSize/2, top + height/2)
-	love.graphics.scale(self.squareCounterScale)
-	self:drawSquaresCounterDecoration(squareSize)
-	love.graphics.setFont(font.hud)
-	love.graphics.setColor(color.white)
-	util.print(text, 12, -8, 0, 1, 1, .5, .5)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new(Transform)
+			:scale(self.squareCounterScale)
+			:origin(.5, .5)
+			:beginChildren()
+				:new(SquaresCounterDecoration)
+					:beginChildren()
+						:new('text', font.hud, self.numSquares)
+							:left(left):top(top)
+							:scale(1 / constant.fontScale)
+							:color(color.white)
+					:endChildren()
+					:wrap()
+					:origin(.5, .5)
+					:pad(8)
+					:width(self.pool.data.ui:get('@current', 'height'))
+					:alignChildren(.5, .5)
+					:shiftChildren(12, -8)
+					:left(left)
+			:endChildren()
 end
 
 function rules:drawChainCounter()
 	if self.chain <= 1 then return end
 	local right, top = self.board.transform:transformPoint(self.board.width, self.board.height + 1/4)
-	local text = self.chain .. 'x'
-	local width, height = util.getTextSize(font.hud, text)
-	love.graphics.push 'all'
-	love.graphics.setColor(color.white)
-	love.graphics.setFont(font.hud)
-	util.print(
-		text,
-		right - width/2, top + height/2,
-		0,
-		self.chainCounterScale, self.chainCounterScale,
-		.5, .5
-	)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new('text', font.hud, self.chain .. 'x')
+			:right(right):top(top)
+			:scale(1 / constant.fontScale)
+			:origin(.5, .5)
+			:scale(self.chainCounterScale)
+			:color(color.white)
 end
 
 function rules:draw()
