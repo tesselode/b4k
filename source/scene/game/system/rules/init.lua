@@ -3,6 +3,7 @@ local ChainPopup = require 'scene.game.entity.chain-popup'
 local color = require 'color'
 local constant = require 'constant'
 local font = require 'font'
+local Rotation = require 'ui.rotation'
 local ScorePopup = require 'scene.game.entity.score-popup'
 local util = require 'util'
 
@@ -100,12 +101,17 @@ function rules:update(dt)
 end
 
 function rules:drawScore()
-	local right, middle = self.board.transform:transformPoint(-1/4, self.board.height/2)
-	love.graphics.push 'all'
-	love.graphics.setFont(font.hud)
-	love.graphics.setColor(color.white)
-	util.print(self.score, right, middle, -math.pi/2, 1, 1, .5, 1)
-	love.graphics.pop()
+	local right, centerY = self.board.transform:transformPoint(-1/4, self.board.height/2)
+	self.pool.data.ui
+		:new(Rotation, -math.pi/2)
+			:origin(.5, 1)
+			:beginChildren()
+				:new('text', font.hud, self.score)
+					:centerX(right)
+					:bottom(centerY)
+					:color(color.white)
+					:scale(1 / constant.fontScale)
+			:endChildren()
 end
 
 function rules:drawTime()
