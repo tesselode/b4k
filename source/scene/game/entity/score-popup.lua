@@ -1,7 +1,7 @@
 local color = require 'color'
+local constant = require 'constant'
 local font = require 'font'
 local Object = require 'lib.classic'
-local util = require 'util'
 
 local ScorePopup = Object:extend()
 
@@ -39,13 +39,13 @@ function ScorePopup:draw()
 		text = text .. 'chain x' .. self.chain .. '\n'
 	end
 	text = text .. '+' .. self.score
-	love.graphics.push 'all'
-	love.graphics.setFont(font.scorePopup)
-	love.graphics.setColor(color.maroon)
-	util.printf(text, self.x + 4, self.y + 4, 100000, 'center', 0, self.scale, self.scale, .5, .5)
-	love.graphics.setColor(self.blinkPhase < .5 and color.orange or color.white)
-	util.printf(text, self.x, self.y, 100000, 'center', 0, self.scale, self.scale, .5, .5)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new('text', font.scorePopup, text, 'center')
+			:centerX(self.x):centerY(self.y)
+			:scale(self.scale / constant.fontScale)
+			:color(self.blinkPhase < .5 and color.orange or color.white)
+			:shadowColor(color.maroon)
+			:shadowOffset(4)
 end
 
 return ScorePopup

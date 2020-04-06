@@ -1,6 +1,7 @@
 local Board = require 'scene.game.entity.board'
 local ChainPopup = require 'scene.game.entity.chain-popup'
 local color = require 'color'
+local constant = require 'constant'
 local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
 local util = require 'util'
@@ -108,13 +109,12 @@ function rules:drawScore()
 end
 
 function rules:drawTime()
-	local text = util.formatTime(self.time)
 	local right, bottom = self.board.transform:transformPoint(self.board.width, -1/4)
-	love.graphics.push 'all'
-	love.graphics.setFont(font.hud)
-	love.graphics.setColor(color.white)
-	util.print(text, right, bottom, 0, 1, 1, 1, 1)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new('text', font.hud, util.formatTime(self.time))
+		:right(right):bottom(bottom)
+		:scale(1 / constant.fontScale)
+		:color(color.white)
 end
 
 function rules:drawSquaresCounterDecoration(size)

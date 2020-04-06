@@ -1,7 +1,7 @@
 local color = require 'color'
+local constant = require 'constant'
 local font = require 'font'
 local Object = require 'lib.classic'
-local util = require 'util'
 
 local ChainPopup = Object:extend()
 
@@ -20,13 +20,13 @@ function ChainPopup:new(pool, x, y)
 end
 
 function ChainPopup:draw()
-	love.graphics.push 'all'
-	love.graphics.setFont(font.scorePopup)
-	love.graphics.setColor(color.withAlpha(color.maroon, self.alpha))
-	util.print('chain', self.x + 4, self.y + 4, 0, self.scale, self.scale, .5, .5)
-	love.graphics.setColor(color.withAlpha(color.white, self.alpha))
-	util.print('chain', self.x, self.y, 0, self.scale, self.scale, .5, .5)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new('text', font.scorePopup, 'chain')
+			:centerX(self.x):centerY(self.y)
+			:scale(self.scale / constant.fontScale)
+			:color(color.withAlpha(color.white, self.alpha))
+			:shadowColor(color.withAlpha(color.maroon, self.alpha))
+			:shadowOffset(4)
 end
 
 return ChainPopup
