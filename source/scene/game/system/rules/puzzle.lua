@@ -1,10 +1,27 @@
 local Board = require 'scene.game.entity.board'
 local cartographer = require 'lib.cartographer'
+local charm = require 'lib.charm'
 local color = require 'color'
+local constant = require 'constant'
 local font = require 'font'
 local rules = require 'scene.game.system.rules'
 local Tile = require 'scene.game.entity.board.tile'
-local util = require 'util'
+
+local MovesSquare = charm.extend('MovesSquare', 'element')
+
+function MovesSquare:angle(angle)
+	self._angle = angle
+end
+
+function MovesSquare:drawBottom()
+	love.graphics.push 'all'
+	local width, height = self:get 'size'
+	love.graphics.translate(width/2, height/2)
+	love.graphics.rotate(self._angle or 0)
+	love.graphics.setLineWidth(8)
+	love.graphics.rectangle('line', -width/2, -height/2, width, height)
+	love.graphics.pop()
+end
 
 local puzzle = setmetatable({
 	showScorePopups = false,
@@ -47,27 +64,25 @@ function puzzle:onRotate(counterClockwise)
 		:ease 'backout'
 end
 
-function puzzle:drawMovesSquare(size)
-	love.graphics.push 'all'
-	love.graphics.rotate(self.movesSquareAngle)
-	love.graphics.setLineWidth(8)
-	love.graphics.rectangle('line', -size/2, -size/2, size, size)
-	love.graphics.pop()
-end
-
 function puzzle:drawMovesCount()
 	if not self.moves then return end
 	local left, top = self.board.transform:transformPoint(0, self.board.height + 1/4)
-	local text = tostring(self.moves)
-	local _, height = util.getTextSize(font.hud, text)
-	local squareSize = height + 16
-	love.graphics.push 'all'
-	love.graphics.translate(left + squareSize/2, top + height/2)
-	love.graphics.setColor(color.white)
-	self:drawMovesSquare(squareSize)
-	love.graphics.setFont(font.hud)
-	util.print(text, 12, -8, 0, 1, 1, .5, .5)
-	love.graphics.pop()
+	self.pool.data.ui
+		:new(MovesSquare)
+			:angle(self.movesSquareAngle)
+			:beginChildren()
+				:new('text', font.hud, self.moves)
+					:left(left):top(top)
+					:scale(1 / constant.fontScale)
+					:color(color.white)
+			:endChildren()
+			:wrap()
+			:origin(.5, .5)
+			:pad(8)
+			:width(self.pool.data.ui:get('@current', 'height'))
+			:left(left)
+			:alignChildren(.5, .5)
+			:shiftChildren(12, -8)
 end
 
 function puzzle:draw()
