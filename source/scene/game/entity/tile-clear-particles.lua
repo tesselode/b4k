@@ -4,6 +4,14 @@ local Object = require 'lib.classic'
 
 local TileClearParticles = Object:extend()
 
+TileClearParticles.colors = {
+	color.red,
+	color.green,
+	color.lightBlue,
+	color.orange,
+	inert = color.maroon,
+}
+
 function TileClearParticles:new(tile)
 	self.particleSystem = love.graphics.newParticleSystem(image.particle.line)
 	self.particleSystem:setPosition(tile.x + .5, tile.y + .5)
@@ -14,7 +22,7 @@ function TileClearParticles:new(tile)
 	self.particleSystem:setTangentialAcceleration(-5, 5)
 	self.particleSystem:setLinearDamping(3, 6)
 	self.particleSystem:setSizes(.1, 0)
-	self.particleSystem:setColors(color.withAlpha(tile.colors[tile.color], 1))
+	self.particleSystem:setColors(color.withAlpha(self.colors[tile.color], 1))
 	self.particleSystem:emit(8)
 end
 

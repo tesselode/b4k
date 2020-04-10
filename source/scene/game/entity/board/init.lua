@@ -67,7 +67,7 @@ end
 function Board:scramble()
 	-- if there's only one color (probably would only happen for testing purposes),
 	-- then it'll be impossible to prevent matching squares, so we'll just stop now
-	if #Tile.colors < 2 then return end
+	if Tile.numColors < 2 then return end
 	self:checkSquares(true)
 	if self.squares:count() < 1 then return end
 	log.trace 'scrambling the board'
@@ -82,7 +82,7 @@ function Board:scramble()
 		for _, x, y in self.squares:items() do
 			local tile = self:getTileAt(x, y)
 			tile.color = tile.color + 1
-			if tile.color > #tile.colors then tile.color = 1 end
+			if tile.color > tile.numColors then tile.color = 1 end
 		end
 		self:checkSquares(true)
 	end

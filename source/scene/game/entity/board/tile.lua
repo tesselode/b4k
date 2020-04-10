@@ -1,15 +1,17 @@
-local color = require 'color'
+local image = require 'image'
 local Object = require 'lib.classic'
+local quad = require 'image.quad'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 
 local Tile = Object:extend()
 
-Tile.colors = {
-	color.green,
-	color.red,
-	color.blue,
-	color.yellow,
-	inert = color.maroon,
+Tile.numColors = 4
+Tile.quads = {
+	quad.tile.regular[1],
+	quad.tile.regular[2],
+	quad.tile.regular[3],
+	quad.tile.regular[4],
+	inert = quad.tile.inert,
 }
 Tile.rotationAnimationDuration = 1/3
 Tile.clearAnimationDuration = .4
@@ -19,7 +21,7 @@ function Tile:new(pool, x, y, tileColor)
 	self.pool = pool
 	self.x = x
 	self.y = y
-	self.color = tileColor or love.math.random(#self.colors)
+	self.color = tileColor or love.math.random(self.numColors)
 	self.state = 'idle'
 	self.rotationAnimation = {
 		tween = nil,
@@ -110,11 +112,11 @@ end
 
 function Tile:draw()
 	love.graphics.push 'all'
-	love.graphics.setColor(self.colors[self.color])
+	local q = self.quads[self.color]
+	local _, _, size = q:getViewport()
 	local x, y = self:getDisplayPosition()
-	love.graphics.translate(x + .5, y + .5)
-	love.graphics.scale(self.scale)
-	love.graphics.rectangle('fill', -.5, -.5, 1, 1)
+	local scale = self.scale / size
+	love.graphics.draw(image.tiles, q, x + .5, y + .5, 0, scale, scale, size/2, size/2)
 	love.graphics.pop()
 end
 
