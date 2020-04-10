@@ -139,17 +139,6 @@ function rules:drawTime()
 		:color(color.white)
 end
 
-function rules:drawSquaresCounterDecoration(size)
-	love.graphics.push 'all'
-	love.graphics.setLineWidth(8)
-	love.graphics.setColor(color.withAlpha(color.white, 1/4))
-	love.graphics.line(-size/2, 0, size/2, 0)
-	love.graphics.line(0, -size/2, 0, size/2)
-	love.graphics.setColor(color.white)
-	love.graphics.rectangle('line', -size/2, -size/2, size, size)
-	love.graphics.pop()
-end
-
 function rules:drawSquaresCounter()
 	if self.numSquares <= 0 then return end
 	local left, top = self.board.transform:transformPoint(0, self.board.height + 1/4)
