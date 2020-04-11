@@ -1,9 +1,11 @@
+local Bloom = require 'shader.bloom'
 local constant = require 'constant'
 local Game = require 'scene.game'
 local sceneManager = require 'scene-manager'
 
 local debugFont = love.graphics.newFont(48)
 local mainTransform = love.math.newTransform()
+local bloom = Bloom()
 
 local function initMainTransform()
 	mainTransform:reset()
@@ -71,14 +73,17 @@ end
 
 function love.resize(w, h)
 	initMainTransform()
+	bloom:resize()
 end
 
 function love.draw()
+	bloom:start()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(mainTransform)
 	love.graphics.setFont(debugFont)
 	sceneManager:emit 'draw'
 	love.graphics.pop()
+	bloom:finish()
 
 	love.graphics.print(('Memory usage: %ikb'):format(collectgarbage 'count'))
 end
