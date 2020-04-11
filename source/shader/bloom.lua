@@ -6,7 +6,7 @@ local Bloom = Object:extend()
 
 Bloom.spread = 1/512
 Bloom.stages = 8
-Bloom.opacity = 1/16
+Bloom.opacity = 1/24
 Bloom.minCanvasSize = 10
 
 function Bloom:createCanvases()
@@ -60,6 +60,8 @@ end
 function Bloom:finish()
 	love.graphics.pop()
 
+	love.graphics.push 'all'
+	love.graphics.setBlendMode('alpha', 'premultiplied')
 	love.graphics.draw(self.mainCanvas[1])
 
 	-- render to the blur canvases
@@ -86,6 +88,8 @@ function Bloom:finish()
 		love.graphics.draw(self.blurCanvases[i][2][1], 0, 0, 0, 1 / scale)
 		love.graphics.pop()
 	end
+
+	love.graphics.pop()
 
 	love.graphics.print(('Shader stages: %i'):format(#self.blurCanvases), 0, 32)
 end

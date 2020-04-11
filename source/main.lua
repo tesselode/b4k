@@ -6,6 +6,7 @@ local sceneManager = require 'scene-manager'
 local debugFont = love.graphics.newFont(48)
 local mainTransform = love.math.newTransform()
 local bloom = Bloom()
+local useBloom = true
 
 local function initMainTransform()
 	mainTransform:reset()
@@ -54,6 +55,7 @@ function love.keypressed(key)
 	if key == 'r' and love.keyboard.isDown 'lctrl' then
 		love.event.quit 'restart'
 	end
+	if key == 'space' then useBloom = not useBloom end
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
@@ -77,13 +79,13 @@ function love.resize(w, h)
 end
 
 function love.draw()
-	bloom:start()
+	if useBloom then bloom:start() end
 	love.graphics.push 'all'
 	love.graphics.applyTransform(mainTransform)
 	love.graphics.setFont(debugFont)
 	sceneManager:emit 'draw'
 	love.graphics.pop()
-	bloom:finish()
+	if useBloom then bloom:finish() end
 
 	love.graphics.print(('Memory usage: %ikb'):format(collectgarbage 'count'))
 	love.graphics.print(('FPS: %ikb'):format(love.timer.getFPS()), 0, 16)
