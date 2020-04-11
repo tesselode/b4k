@@ -4,11 +4,12 @@ local Object = require 'lib.classic'
 
 local Bloom = Object:extend()
 
+Bloom.spread = 1/256
 Bloom.stages = 8
+Bloom.opacity = 1/16
 
 function Bloom:createCanvases()
 	self.mainCanvas = {love.graphics.newCanvas(), stencil = true}
-	self.dimCanvas = {love.graphics.newCanvas(), stencil = true}
 	self.blurCanvases = {}
 	for i = 1, self.stages do
 		-- scale is halved each time: 1, 1/2, 1/4, 1/8, etc.
@@ -34,16 +35,26 @@ function Bloom:createCanvases()
 	end
 end
 
-function Bloom:new()
+function Bloom:updateShaderOffsets()
+	local aspectRatio = love.graphics.getWidth() / love.graphics.getHeight()
+	self.horizontalBlurShader:send('offset', {self.spread, 0})
+	self.verticalBlurShader:send('offset', {0, self.spread * aspectRatio})
+end
+
+function Bloom:createShaders()
 	self.horizontalBlurShader = love.graphics.newShader 'shader/blur.glsl'
-	self.horizontalBlurShader:send('offset', {.00125, 0});
 	self.verticalBlurShader = love.graphics.newShader 'shader/blur.glsl'
-	self.verticalBlurShader:send('offset', {0, .00125});
+	self:updateShaderOffsets()
+end
+
+function Bloom:new()
 	self:createCanvases()
+	self:createShaders()
 end
 
 function Bloom:resize()
 	self:createCanvases()
+	self:updateShaderOffsets()
 end
 
 function Bloom:start()
@@ -57,33 +68,27 @@ function Bloom:finish()
 
 	love.graphics.draw(self.mainCanvas[1])
 
-	-- render to the dim canvas
-	love.graphics.push 'all'
-	love.graphics.setCanvas(self.dimCanvas)
-	love.graphics.clear()
-	love.graphics.setColor(1/8, 1/8, 1/8)
-	love.graphics.draw(self.mainCanvas[1])
-	love.graphics.pop()
-
 	-- render to the blur canvases
 	for i = 1, self.stages do
 		local scale = 1 / (2 ^ (i - 1))
+		-- horizontal blur
 		love.graphics.push 'all'
 		love.graphics.setCanvas(self.blurCanvases[i][1])
 		love.graphics.setShader(self.horizontalBlurShader)
 		love.graphics.clear()
-		love.graphics.draw(self.dimCanvas[1], 0, 0, 0, scale)
+		love.graphics.draw(self.mainCanvas[1], 0, 0, 0, scale)
 		love.graphics.pop()
-
+		-- vertical blur
 		love.graphics.push 'all'
 		love.graphics.setCanvas(self.blurCanvases[i][2])
 		love.graphics.setShader(self.verticalBlurShader)
 		love.graphics.clear()
 		love.graphics.draw(self.blurCanvases[i][1][1])
 		love.graphics.pop()
-
+		-- blend the blurred canvas with the main canvas
 		love.graphics.push 'all'
 		love.graphics.setBlendMode 'add'
+		love.graphics.setColor(1, 1, 1, self.opacity)
 		love.graphics.draw(self.blurCanvases[i][2][1], 0, 0, 0, 1 / scale)
 		love.graphics.pop()
 	end
