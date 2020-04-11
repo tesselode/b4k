@@ -1,3 +1,4 @@
+local color = require 'color'
 local image = require 'image'
 local Object = require 'lib.classic'
 local quad = require 'image.quad'
@@ -6,6 +7,12 @@ local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
 local Tile = Object:extend()
 
 Tile.numColors = 4
+Tile.primaryColors = {
+	color.red,
+	color.green,
+	color.lightBlue,
+	color.lightOrange,
+}
 Tile.quads = {
 	quad.tile.regular[1],
 	quad.tile.regular[2],

@@ -153,7 +153,11 @@ function Board:checkSquares(silent)
 				end
 			end
 			if not silent then
-				self.squareHighlights:get(x, y):setActive(square and true or false)
+				local squareHighlight = self.squareHighlights:get(x, y)
+				if square then
+					squareHighlight:setColor(square.color)
+				end
+				squareHighlight:setActive(square and true or false)
 			end
 		end
 	end
@@ -335,6 +339,12 @@ function Board:drawTiles()
 	love.graphics.pop()
 end
 
+function Board:drawSquareHighlightBackgrounds()
+	for _, _, _, squareHighlight in self.squareHighlights:items() do
+		squareHighlight:drawBackground()
+	end
+end
+
 function Board:drawSquareHighlights()
 	for _, _, _, squareHighlight in self.squareHighlights:items() do
 		squareHighlight:draw()
@@ -353,7 +363,7 @@ end
 
 function Board:drawOutline()
 	love.graphics.push 'all'
-	love.graphics.setColor(color.white)
+	love.graphics.setColor(color.slateGray)
 	love.graphics.setLineWidth(.05)
 	love.graphics.rectangle('line', 0, 0, self.width, self.height)
 	love.graphics.pop()
@@ -363,11 +373,12 @@ function Board:draw()
 	love.graphics.push 'all'
 	love.graphics.applyTransform(self.transform)
 	self:drawBackground()
+	self:drawSquareHighlightBackgrounds()
 	self:drawTiles()
+	self:drawOutline()
 	self:drawSquareHighlights()
 	self.pool:emit 'drawOnBoard'
 	self:drawCursor()
-	self:drawOutline()
 	love.graphics.pop()
 end
 

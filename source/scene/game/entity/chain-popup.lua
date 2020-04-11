@@ -25,7 +25,7 @@ function ChainPopup:draw()
 			:centerX(self.x):centerY(self.y)
 			:scale(self.scale / constant.fontScale)
 			:color(color.withAlpha(color.white, self.alpha))
-			:shadowColor(color.withAlpha(color.maroon, self.alpha))
+			:shadowColor(color.withAlpha(color.coldBlack, self.alpha))
 			:shadowOffset(4)
 end
 

@@ -43,8 +43,8 @@ function ScorePopup:draw()
 		:new('text', font.scorePopup, text, 'center')
 			:centerX(self.x):centerY(self.y)
 			:scale(self.scale / constant.fontScale)
-			:color(self.blinkPhase < .5 and color.orange or color.white)
-			:shadowColor(color.maroon)
+			:color(self.blinkPhase < .5 and color.lightOrange or color.white)
+			:shadowColor(color.coldBlack)
 			:shadowOffset(4)
 end
 

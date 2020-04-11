@@ -1,20 +1,11 @@
 local colors = {
-	peach = '#e4a672',
-	lightBrown = '#b86f50',
-	brown = '#743f39',
-	maroon = '#3f2832',
-	darkRed = '#9e2835',
-	red = '#e53b44',
-	orange = '#fb922b',
-	yellow = '#ffe762',
-	green = '#63c64d',
-	darkGreen = '#327345',
-	darkCyan = '#193d3f',
-	slate = '#4f6781',
-	silver = '#afbfd2',
-	white = '#ffffff',
-	lightBlue = '#2ce8f4',
-	blue = '#0484d1',
+	coldBlack = '#262B44',
+	green = '#63C74D',
+	red = '#FB0A44',
+	lightBlue = '#32E8F5',
+	lightOrange = '#FDAE34',
+	slateGray = '#5A6988',
+	white = '#FFFFFF',
 }
 
 for colorName, color in pairs(colors) do
