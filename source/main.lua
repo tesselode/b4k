@@ -86,4 +86,5 @@ function love.draw()
 	bloom:finish()
 
 	love.graphics.print(('Memory usage: %ikb'):format(collectgarbage 'count'))
+	love.graphics.print(('FPS: %ikb'):format(love.timer.getFPS()), 0, 16)
 end
