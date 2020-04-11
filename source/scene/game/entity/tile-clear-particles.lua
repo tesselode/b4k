@@ -27,7 +27,7 @@ end
 
 function TileClearParticles:drawOnBoard()
 	love.graphics.push 'all'
-	love.graphics.setBlendMode('screen', 'premultiplied')
+	love.graphics.setBlendMode 'add'
 	love.graphics.draw(self.particleSystem)
 	love.graphics.pop()
 end

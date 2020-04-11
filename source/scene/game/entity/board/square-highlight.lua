@@ -37,7 +37,7 @@ end
 
 function SquareHighlight:drawBackground()
 	love.graphics.push 'all'
-	love.graphics.setColor(color.withAlpha(self.color, self.alpha / 4))
+	love.graphics.setColor(color.withAlpha(self.color, self.alpha / 6))
 	love.graphics.rectangle('fill', self.x, self.y, 2, 2)
 	love.graphics.pop()
 end
