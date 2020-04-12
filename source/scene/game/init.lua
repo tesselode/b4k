@@ -25,6 +25,7 @@ function Game:enter(previous, mode, ...)
 		systems = {
 			require 'scene.game.system.timer',
 			self:getRulesSystem(mode),
+			require 'scene.game.system.background',
 			nata.oop(),
 			require 'scene.game.system.ui',
 		},

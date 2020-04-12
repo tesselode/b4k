@@ -1,11 +1,14 @@
 local colors = {
-	coldBlack = '#262B44',
-	green = '#63C74D',
-	red = '#FB0A44',
-	lightBlue = '#32E8F5',
-	lightOrange = '#FDAE34',
-	slateGray = '#5A6988',
-	white = '#FFFFFF',
+	coldBlack = '#262b44',
+	darkBlue = '#3a4466',
+	darkPurple = '#68386c',
+	green = '#63c74d',
+	lightBlue = '#32e8f5',
+	lightOrange = '#fdae34',
+	purple = '#b55088',
+	red = '#fb0a44',
+	slateGray = '#5a6988',
+	white = '#ffffff',
 }
 
 for colorName, color in pairs(colors) do

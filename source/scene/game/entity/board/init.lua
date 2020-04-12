@@ -319,9 +319,9 @@ function Board:drawBackground()
 		for y = 0, self.height - 1 do
 			local index = x + y * (self.width - 1)
 			if index % 2 == 0 then
-				love.graphics.setColor(.5, .5, .5, .25)
+				love.graphics.setColor(.1, .1, .1, .75)
 			else
-				love.graphics.setColor(.25, .25, .25, .25)
+				love.graphics.setColor(.05, .05, .05, .75)
 			end
 			love.graphics.rectangle('fill', x, y, 1, 1)
 		end

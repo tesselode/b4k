@@ -1,6 +1,3 @@
-local constant = require 'constant'
-local log = require 'lib.log'
-
 local util = {}
 
 -- math
@@ -14,6 +11,10 @@ end
 
 function util.indexToCoordinates(index, width)
 	return index % width, math.floor(index / width)
+end
+
+function util.lerp(a, b, amount)
+	return a + (b - a) * amount
 end
 
 -- functions
