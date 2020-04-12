@@ -125,13 +125,13 @@ function Tile:drawWildTile()
 	for i, ringColor in ipairs(self.primaryColors) do
 		love.graphics.push 'all'
 		love.graphics.rotate(t + i)
-		local radius = .4 * (i / #self.primaryColors)
+		local radius = .5 * (i / #self.primaryColors)
 		local horizontalRadius = radius * math.sin(t * (i ^ .25) + i)
-		if math.abs(horizontalRadius) < .025 then
+		--[[ if math.abs(horizontalRadius) < .025 then
 			horizontalRadius = .025 * util.sign(horizontalRadius)
-		end
+		end ]]
 		love.graphics.setColor(ringColor)
-		love.graphics.ellipse('line', 0, 0, horizontalRadius, radius, 64)
+		love.graphics.rectangle('line', -horizontalRadius/2, -radius/2, horizontalRadius, radius)
 		love.graphics.pop()
 	end
 	love.graphics.pop()
