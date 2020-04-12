@@ -1,9 +1,9 @@
 local color = require 'color'
 local constant = require 'constant'
-local Object = require 'lib.classic'
 local util = require 'util'
 
 local function transformPoint(x, y, z)
+	if z <= 0 then z = .0001 end
 	return x / z, y / z
 end
 
@@ -20,32 +20,32 @@ local function transformRectangle(x, y, z, w, h)
 	return tx1, ty1, tx2, ty2, tx3, ty3, tx4, ty4
 end
 
-local Corridor = Object:extend()
+local corridor = {}
 
-Corridor.numRectangles = 100
-Corridor.colors = {
+corridor.numRectangles = 100
+corridor.colors = {
 	color.darkBlue,
 	color.darkPurple,
 	color.purple,
 }
-Corridor.width = 10000
-Corridor.minY = -10000
-Corridor.maxY = 10000
-Corridor.minWidth = 1
-Corridor.maxWidth = 5
-Corridor.minHeight = 500
-Corridor.maxHeight = 5000
-Corridor.minZ = Corridor.maxWidth / 2
-Corridor.maxZ = 100
-Corridor.minSpeed = 1
-Corridor.maxSpeed = 10
-Corridor.speed = 1
+corridor.minX = 10000
+corridor.maxX = 20000
+corridor.minY = -10000
+corridor.maxY = 10000
+corridor.minWidth = 1
+corridor.maxWidth = 5
+corridor.minHeight = 500
+corridor.maxHeight = 5000
+corridor.minZ = .0001
+corridor.maxZ = 100
+corridor.minSpeed = 5
+corridor.maxSpeed = 20
 
-function Corridor:new()
+function corridor:init()
 	self.rectangles = {}
 	for _ = 1, self.numRectangles do
 		table.insert(self.rectangles, {
-			x = love.math.random() < .5 and -self.width or self.width,
+			x = util.lerp(self.minX, self.maxX, love.math.random()) * (love.math.random() < .5 and -1 or 1),
 			y = util.lerp(self.minY, self.maxY, love.math.random()),
 			z = util.lerp(self.minZ, self.maxZ, love.math.random()),
 			width = util.lerp(self.minWidth, self.maxWidth, love.math.random()),
@@ -54,15 +54,14 @@ function Corridor:new()
 			color = self.colors[love.math.random(#self.colors)],
 		})
 	end
-	self.angle = 0
 end
 
-function Corridor:update(dt)
+function corridor:update(dt)
 	for _, rectangle in ipairs(self.rectangles) do
 		rectangle.z = rectangle.z - rectangle.speed * dt
 		if rectangle.z < self.minZ then
 			rectangle.z = self.maxZ
-			rectangle.x = love.math.random() < .5 and -self.width or self.width
+			rectangle.x = util.lerp(self.minX, self.maxX, love.math.random()) * (love.math.random() < .5 and -1 or 1)
 			rectangle.y = util.lerp(self.minY, self.maxY, love.math.random())
 			rectangle.width = util.lerp(self.minWidth, self.maxWidth, love.math.random())
 			rectangle.height = util.lerp(self.minHeight, self.maxHeight, love.math.random())
@@ -70,13 +69,11 @@ function Corridor:update(dt)
 			rectangle.color = self.colors[love.math.random(#self.colors)]
 		end
 	end
-	--self.angle = self.angle + .1 * dt
 end
 
-function Corridor:draw()
+function corridor:draw()
 	love.graphics.push 'all'
 	love.graphics.translate(constant.screenWidth/2, constant.screenHeight/2)
-	love.graphics.rotate(self.angle)
 	for _, r in ipairs(self.rectangles) do
 		love.graphics.setColor(color.withAlpha(r.color, 1/4))
 		love.graphics.polygon('fill', transformRectangle(r.x, r.y, r.z, r.width, r.height))
@@ -86,4 +83,4 @@ function Corridor:draw()
 	love.graphics.pop()
 end
 
-return Corridor
+return corridor

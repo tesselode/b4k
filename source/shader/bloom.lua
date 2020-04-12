@@ -6,7 +6,7 @@ local Bloom = Object:extend()
 
 Bloom.spread = 1/512
 Bloom.stages = 8
-Bloom.opacity = 1/20
+Bloom.opacity = 1/24
 Bloom.minCanvasSize = 10
 
 function Bloom:createCanvases()
