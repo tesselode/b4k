@@ -1,6 +1,10 @@
 local util = {}
 
 -- math
+function util.sign(x)
+	return x < 0 and -1 or 1
+end
+
 function util.clamp(x, min, max)
 	return x < min and min or x > max and max or x
 end

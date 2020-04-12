@@ -3,6 +3,7 @@ local image = require 'image'
 local Object = require 'lib.classic'
 local quad = require 'image.quad'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
+local util = require 'util'
 
 local Tile = Object:extend()
 
@@ -117,13 +118,37 @@ function Tile:getDisplayPosition()
 	return self.x, self.y
 end
 
-function Tile:draw()
+function Tile:drawWildTile()
+	local t = love.timer.getTime() + (self.x + self.y * 17) / 3.3
 	love.graphics.push 'all'
+	love.graphics.setLineWidth(.05)
+	for i, ringColor in ipairs(self.primaryColors) do
+		love.graphics.push 'all'
+		love.graphics.rotate(t + i)
+		local radius = .4 * (i / #self.primaryColors)
+		local horizontalRadius = radius * math.sin(t * (i ^ .25) + i)
+		if math.abs(horizontalRadius) < .025 then
+			horizontalRadius = .025 * util.sign(horizontalRadius)
+		end
+		love.graphics.setColor(ringColor)
+		love.graphics.ellipse('line', 0, 0, horizontalRadius, radius, 64)
+		love.graphics.pop()
+	end
+	love.graphics.pop()
+end
+
+function Tile:drawRegularTile()
 	local q = self.quads[self.color]
 	local _, _, size = q:getViewport()
-	local x, y = self:getDisplayPosition()
 	local scale = self.scale / size
-	love.graphics.draw(image.tiles, q, x + .5, y + .5, 0, scale, scale, size/2, size/2)
+	love.graphics.draw(image.tiles, q, 0, 0, 0, scale)
+end
+
+function Tile:draw()
+	love.graphics.push 'all'
+	local x, y = self:getDisplayPosition()
+	love.graphics.translate(x + .5, y + .5)
+	self:drawWildTile()
 	love.graphics.pop()
 end
 
