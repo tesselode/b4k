@@ -3,7 +3,7 @@ local image = require 'image'
 local Object = require 'lib.classic'
 local quad = require 'image.quad'
 local TileClearParticles = require 'scene.game.entity.tile-clear-particles'
-local util = require 'util'
+local WildTileVisual = require 'scene.game.entity.board.tile.wild-tile-visual'
 
 local Tile = Object:extend()
 
@@ -42,6 +42,7 @@ function Tile:new(pool, x, y, tileColor)
 		vy = nil,
 	}
 	self.scale = 1
+	self.wildTileVisual = WildTileVisual(pool)
 end
 
 function Tile:isIdle()
@@ -95,6 +96,7 @@ function Tile:clear()
 end
 
 function Tile:update(dt)
+	self.wildTileVisual:update(dt)
 	if self.state == 'falling' then
 		local animation = self.fallAnimation
 		animation.vy = animation.vy + self.gravity * dt
@@ -118,25 +120,6 @@ function Tile:getDisplayPosition()
 	return self.x, self.y
 end
 
-function Tile:drawWildTile()
-	local t = love.timer.getTime() + (self.x + self.y * 17) / 3.3
-	love.graphics.push 'all'
-	love.graphics.setLineWidth(.05)
-	for i, ringColor in ipairs(self.primaryColors) do
-		love.graphics.push 'all'
-		love.graphics.rotate(t + i)
-		local radius = .5 * (i / #self.primaryColors)
-		local horizontalRadius = radius * math.sin(t * (i ^ .25) + i)
-		--[[ if math.abs(horizontalRadius) < .025 then
-			horizontalRadius = .025 * util.sign(horizontalRadius)
-		end ]]
-		love.graphics.setColor(ringColor)
-		love.graphics.rectangle('line', -horizontalRadius/2, -radius/2, horizontalRadius, radius)
-		love.graphics.pop()
-	end
-	love.graphics.pop()
-end
-
 function Tile:drawRegularTile()
 	local q = self.quads[self.color]
 	local _, _, size = q:getViewport()
@@ -148,7 +131,7 @@ function Tile:draw()
 	love.graphics.push 'all'
 	local x, y = self:getDisplayPosition()
 	love.graphics.translate(x + .5, y + .5)
-	self:drawWildTile()
+	self.wildTileVisual:draw()
 	love.graphics.pop()
 end
 
