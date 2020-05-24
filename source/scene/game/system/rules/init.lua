@@ -7,6 +7,7 @@ local font = require 'font'
 local ScorePopup = require 'scene.game.entity.score-popup'
 local Transform = require 'ui.transform'
 local util = require 'util'
+local VectorText = require 'ui.vector-text'
 
 local SquaresCounterDecoration = charm.extend('SquaresCounterDecoration', 'element')
 
@@ -122,11 +123,11 @@ function rules:drawScore()
 			:angle(-math.pi/2)
 			:origin(.5, 1)
 			:beginChildren()
-				:new('text', font.hud, self.score)
+				:new(VectorText, self.score)
+					:scale(200)
 					:centerX(right)
 					:bottom(centerY)
 					:color(color.white)
-					:scale(1 / constant.fontScale)
 			:endChildren()
 end
 
